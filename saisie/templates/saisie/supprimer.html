@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Supprimer le Client</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
+        .alert { background-color: #f8d7da; color: #721c24; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #f5c6cb; }
+        h1 { color: #dc3545; }
+        .client-info { background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        .btn-supprimer { background-color: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        .btn-supprimer:hover { background-color: #c82333; }
+        .btn-annuler { background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-left: 10px; }
+        .btn-annuler:hover { background-color: #5a6268; }
+    </style>
+</head>
+<body>
+    <div class="alert">
+        <h1>⚠️ Confirmation de suppression</h1>
+    </div>
+    
+    <p>Êtes-vous sûr de vouloir supprimer définitivement ce client ?</p>
+    
+    <div class="client-info">
+        <h3>{{ client.nom }}</h3>
+        <p>📧 {{ client.email }}</p>
+        <p>📞 {{ client.telephone }}</p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn-supprimer">🗑️ Oui, supprimer définitivement</button>
+        <a href="{% url 'liste_clients' %}" class="btn-annuler">❌ Non, annuler</a>
+    </form>
+</body>
+</html>

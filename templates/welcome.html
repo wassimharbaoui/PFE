@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Animation de confettis (optionnel) -->
+    <div style="position: fixed; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 9999;" id="confetti"></div>
+
+    <!-- Carte de bienvenue avec animation -->
+    <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+        <div style="max-width: 600px; width: 100%; animation: slideUp 0.8s ease;">
+            <!-- Carte principale -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 30px; padding: 50px; color: white; text-align: center; box-shadow: 0 30px 60px rgba(102, 126, 234, 0.4); position: relative; overflow: hidden;">
+                
+                <!-- Éléments décoratifs animés -->
+                <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%; animation: float 6s ease-in-out infinite;"></div>
+                <div style="position: absolute; bottom: -50px; left: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%; animation: float 8s ease-in-out infinite reverse;"></div>
+                
+                <!-- Icône de bienvenue -->
+                <div style="margin-bottom: 30px; animation: bounce 2s infinite;">
+                    <i class="fas fa-hand-wave" style="font-size: 5rem; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));"></i>
+                </div>
+                
+                <!-- Titre -->
+                <h1 style="font-size: 3.5rem; margin-bottom: 20px; font-weight: 700; text-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+                    Bienvenue, <span style="color: #ffd700;">{{ user.username }}</span> !
+                </h1>
+                
+                <!-- Message -->
+                <p style="font-size: 1.3rem; margin-bottom: 40px; opacity: 0.95; line-height: 1.6;">
+                    Vous êtes connecté à la plateforme <strong>Data Quality</strong>.<br>
+                    Prêt à analyser vos données ?
+                </p>
+                
+                <!-- Boutons d'action -->
+                <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                    <a href="{% url 'engine:dashboard' %}" class="btn" style="background: white; color: #667eea; padding: 15px 40px; border-radius: 50px; font-weight: 600; font-size: 1.1rem; box-shadow: 0 10px 20px rgba(0,0,0,0.2); transition: all 0.3s;">
+                        <i class="fas fa-chart-bar" style="margin-right: 10px;"></i>
+                        Voir le dashboard
+                    </a>
+                    <a href="{% url 'engine:lancer_analyse' %}" class="btn" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; padding: 15px 40px; border-radius: 50px; font-weight: 600; font-size: 1.1rem; border: 2px solid rgba(255,255,255,0.3); transition: all 0.3s;">
+                        <i class="fas fa-play" style="margin-right: 10px;"></i>
+                        Lancer une analyse
+                    </a>
+                </div>
+            </div>
+
+            <!-- Cartes statistiques rapides -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 40px;">
+                <div style="background: white; border-radius: 20px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: fadeInUp 0.6s ease 0.2s both;">
+                    <i class="fas fa-server" style="color: #667eea; font-size: 2rem; margin-bottom: 10px;"></i>
+                    <h3 style="font-size: 2rem; color: #333;">{{ servers_count|default:"0" }}</h3>
+                    <p style="color: #666;">Serveurs</p>
+                </div>
+                <div style="background: white; border-radius: 20px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: fadeInUp 0.6s ease 0.4s both;">
+                    <i class="fas fa-database" style="color: #27ae60; font-size: 2rem; margin-bottom: 10px;"></i>
+                    <h3 style="font-size: 2rem; color: #333;">{{ databases_count|default:"0" }}</h3>
+                    <p style="color: #666;">Bases</p>
+                </div>
+                <div style="background: white; border-radius: 20px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: fadeInUp 0.6s ease 0.6s both;">
+                    <i class="fas fa-chart-line" style="color: #f39c12; font-size: 2rem; margin-bottom: 10px;"></i>
+                    <h3 style="font-size: 2rem; color: #333;">{{ analyses_count|default:"0" }}</h3>
+                    <p style="color: #666;">Analyses</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Animations CSS -->
+<style>
+    @keyframes slideUp {
+        from {
+            transform: translateY(50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            transform: translateY(30px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0) rotate(0deg);
+        }
+        50% {
+            transform: translateY(-30px) rotate(10deg);
+        }
+    }
+    
+    @keyframes bounce {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-20px);
+        }
+    }
+    
+    .btn:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.3) !important;
+    }
+</style>
+
+<!-- Petit script pour animation de confettis (optionnel) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation de bienvenue
+    console.log('Bienvenue sur Data Quality Platform !');
+    
+    // Optionnel : confettis (décommente si tu veux)
+    /*
+    for(let i = 0; i < 50; i++) {
+        setTimeout(() => {
+            createConfetti();
+        }, i * 50);
+    }
+    */
+});
+
+function createConfetti() {
+    const confetti = document.createElement('div');
+    confetti.style.position = 'fixed';
+    confetti.style.left = Math.random() * 100 + '%';
+    confetti.style.top = '-10px';
+    confetti.style.width = '10px';
+    confetti.style.height = '10px';
+    confetti.style.background = `hsl(${Math.random() * 360}, 100%, 50%)`;
+    confetti.style.borderRadius = '50%';
+    confetti.style.pointerEvents = 'none';
+    confetti.style.zIndex = '9999';
+    confetti.style.animation = `fall ${Math.random() * 3 + 2}s linear`;
+    document.body.appendChild(confetti);
+    
+    setTimeout(() => {
+        confetti.remove();
+    }, 5000);
+}
+
+// Ajouter l'animation de chute
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fall {
+        to {
+            transform: translateY(100vh) rotate(360deg);
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

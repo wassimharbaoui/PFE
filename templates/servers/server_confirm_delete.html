@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 50px auto;">
+    <div class="card" style="padding: 40px; border-left: 5px solid #e74c3c;background: #fff5f5;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #e74c3c; margin-bottom: 10px;">⚠️ Attention</h1>
+            <p style="color: #666; font-size: 16px;">Êtes-vous sûr de vouloir supprimer le serveur ?</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #e74c3c;">
+            <p style="margin: 0;"><strong>Serveur :</strong> <span style="color: #e74c3c; font-size: 18px;">{{ server.name }}</span></p>
+            <p style="margin: 10px 0 0 0; color: #666;"><strong>Adresse IP :</strong> {{ server.ip_address }}</p>
+        </div>
+        
+        <p style="color: #e74c3c; font-weight: bold; margin-bottom: 30px;">Cette action est définitive et ne peut pas être annulée.</p>
+        
+        <form method="post" style="display: flex; gap: 10px; justify-content: center;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" style="padding: 12px 30px; font-size: 16px;">
+                🗑️ Supprimer définitivement</button>
+            <a href="{% url 'servers:server_list' %}" class="btn btn-secondary" style="padding: 12px 30px; font-size: 16px;">
+                ❌ Annuler</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

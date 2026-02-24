@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h2>{{ action }} un serveur</h2>
+        </div>
+        <div class="card-body">
+            <form method="post" id="serverForm">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Nom du serveur</label>
+                            {{ form.name }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Adresse IP</label>
+                            {{ form.ip_address }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Port</label>
+                            {{ form.port }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Nom d'utilisateur</label>
+                            {{ form.username }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Mot de passe</label>
+                            {{ form.password_input }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="button" class="btn btn-info" id="testConnection">
+                        🔌 Tester la connexion et charger les bases
+                    </button>
+                </div>
+
+                <div id="connectionResult" class="mb-3"></div>
+
+                <div class="form-group">
+                    <label>Bases de données disponibles</label>
+                    <div id="databaseList" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; max-height: 300px; overflow-y: auto; background: #f8f9fa;">
+                        {% if existing_databases %}
+                            <!-- En mode modification, on charge toutes les bases via AJAX -->
+                            <div class="text-center text-muted">
+                                Cliquez sur "Tester la connexion" pour voir toutes les bases
+                            </div>
+                        {% else %}
+                            <div class="text-center text-muted" id="loadingMessage">
+                                Cliquez sur "Tester la connexion" pour charger les bases
+                            </div>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">Cochez les bases à associer au serveur</small>
+                </div>
+
+                <!-- Conteneur pour les inputs cachés -->
+                <div id="selectedDatabasesContainer"></div>
+
+                <div class="form-group">
+                    <div class="form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label">Serveur actif</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <a href="{% url 'servers:server_list' %}" class="btn btn-secondary">Annuler</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Récupérer les bases déjà sélectionnées (en mode modification)
+    var selectedDatabases = [
+        {% if existing_databases %}
+            {% for db in existing_databases %}
+                '{{ db|escapejs }}',
+            {% endfor %}
+        {% endif %}
+    ];
+    
+    $('#testConnection').click(function() {
+        var ip = $('#id_ip_address').val();
+        var port = $('#id_port').val();
+        var user = $('#id_username').val();
+        var password = $('#id_password_input').val();
+        
+        if (!ip || !user || !password) {
+            $('#connectionResult').html('<div class="alert alert-danger">Veuillez remplir IP, utilisateur et mot de passe</div>');
+            return;
+        }
+        
+        $('#connectionResult').html('<div class="alert alert-info">Test de connexion en cours...</div>');
+        $('#databaseList').html('<div class="text-center">Chargement des bases...</div>');
+        
+        $.get('/parametrage/ajax/get-databases/', {
+            ip: ip,
+            port: port,
+            user: user,
+            password: password
+        })
+        .done(function(data) {
+            if (data.success) {
+                // Afficher TOUTES les bases avec cases à cocher
+                var html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">';
+                
+                for (var i = 0; i < data.databases.length; i++) {
+                    var db = data.databases[i];
+                    // Vérifier si cette base était déjà sélectionnée
+                    var isChecked = selectedDatabases.includes(db);
+                    var checked = isChecked ? 'checked' : '';
+                    
+                    html += '<div style="background: white; padding: 10px; border-radius: 5px; border: 1px solid #dee2e6;">';
+                    html += '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">';
+                    html += '<input type="checkbox" class="database-checkbox" value="' + db + '" ' + checked + ' style="width: 18px; height: 18px;">';
+                    html += '<span style="font-size: 14px;">' + db + '</span>';
+                    html += '</label>';
+                    html += '</div>';
+                }
+                html += '</div>';
+                
+                $('#databaseList').html(html);
+                $('#connectionResult').html('<div class="alert alert-success">✅ Connexion réussie ! ' + data.databases.length + ' base(s) trouvée(s)</div>');
+            } else {
+                $('#databaseList').html('<div class="alert alert-danger">Erreur: ' + data.error + '</div>');
+                $('#connectionResult').html('<div class="alert alert-danger">❌ Erreur: ' + data.error + '</div>');
+            }
+        })
+        .fail(function() {
+            $('#databaseList').html('<div class="alert alert-danger">Erreur de connexion</div>');
+            $('#connectionResult').html('<div class="alert alert-danger">❌ Erreur de connexion au serveur</div>');
+        });
+    });
+    
+    // Soumettre le formulaire avec les bases sélectionnées
+    $('#serverForm').submit(function(e) {
+        // Supprimer les anciens inputs
+        $('#selectedDatabasesContainer').empty();
+        
+        // Ajouter les bases sélectionnées
+        $('.database-checkbox:checked').each(function() {
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'databases[]',
+                value: $(this).val()
+            }).appendTo('#selectedDatabasesContainer');
+        });
+    });
+});
+</script>
+{% endblock %}

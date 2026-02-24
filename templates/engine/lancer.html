@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec animation -->
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center; animation: slideDown 0.5s ease;">
+        <div>
+            <h1 style="display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-microchip" style="color: #667eea; animation: pulse 2s infinite;"></i> 
+                Moteur d'analyse
+            </h1>
+            <p style="color: #666; margin-top: 5px;">Lancez une analyse de qualité sur vos bases de données</p>
+        </div>
+    </div>
+
+    <!-- Carte principale avec animation -->
+    <div class="card" style="border: none; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.1); animation: fadeInUp 0.6s ease;">
+        
+        <!-- En-tête coloré -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; color: white;">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="background: rgba(255,255,255,0.2); width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center; animation: rotate 10s linear infinite;">
+                    <i class="fas fa-cogs" style="font-size: 2.5rem;"></i>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 2rem;">Analyser une base de données</h2>
+                    <p style="margin: 5px 0 0 0; opacity: 0.9;">Sélectionnez un serveur et une base pour commencer</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Corps du formulaire -->
+        <div style="padding: 40px;">
+            <form method="post" id="analyseForm" style="animation: fadeIn 1s ease;">
+                {% csrf_token %}
+                
+                <!-- Sélection du serveur -->
+                <div style="margin-bottom: 30px; animation: slideLeft 0.5s ease;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #333;">
+                        <i class="fas fa-server" style="color: #667eea; margin-right: 8px;"></i>
+                        Serveur
+                    </label>
+                    <select name="serveur" id="serveur" class="form-control" required style="padding: 15px; border-radius: 12px; border: 2px solid #e9ecef; transition: all 0.3s; font-size: 16px;" onchange="showLoading(this)">
+                        <option value="">🔽 -- Choisir un serveur --</option>
+                        {% for s in serveurs %}
+                        <option value="{{ s.id }}" style="padding: 10px;">🖥️ {{ s.name }} ({{ s.ip_address }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Sélection de la base (avec animation de chargement) -->
+                <div style="margin-bottom: 30px; animation: slideLeft 0.6s ease;" id="databaseSection">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #333;">
+                        <i class="fas fa-database" style="color: #667eea; margin-right: 8px;"></i>
+                        Base de données
+                    </label>
+                    <select name="base_donnees" id="base_donnees" class="form-control" required disabled style="padding: 15px; border-radius: 12px; border: 2px solid #e9ecef; transition: all 0.3s; font-size: 16px;">
+                        <option value="">📌 -- Sélectionnez d'abord un serveur --</option>
+                    </select>
+                    
+                    <!-- Indicateur de chargement (caché par défaut) -->
+                    <div id="loadingIndicator" style="display: none; margin-top: 15px; text-align: center;">
+                        <div style="display: inline-block; animation: spin 1s linear infinite;">
+                            <i class="fas fa-spinner fa-spin" style="color: #667eea; font-size: 1.5rem;"></i>
+                        </div>
+                        <span style="margin-left: 10px; color: #666;">Chargement des bases...</span>
+                    </div>
+                </div>
+
+                <!-- Résumé de l'analyse (apparaît après sélection) -->
+                <div id="analyseResume" style="background: #f8f9fa; border-radius: 15px; padding: 20px; margin-bottom: 30px; display: none; animation: fadeIn 0.5s ease;">
+                    <h4 style="color: #333; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-clipboard-check" style="color: #27ae60;"></i>
+                        Résumé de l'analyse
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                        <div style="text-align: center;">
+                            <div style="background: #e3f2fd; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
+                                <i class="fas fa-search" style="color: #1976d2;"></i>
+                            </div>
+                            <small style="color: #666;">NULL</small>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="background: #e8f5e8; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
+                                <i class="fas fa-copy" style="color: #2e7d32;"></i>
+                            </div>
+                            <small style="color: #666;">Doublons</small>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="background: #fff3e0; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
+                                <i class="fas fa-exclamation-triangle" style="color: #ed6c02;"></i>
+                            </div>
+                            <small style="color: #666;">Anomalies</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Boutons avec animations -->
+                <div style="display: flex; gap: 15px; margin-top: 30px;">
+                    <button type="submit" id="submitBtn" class="btn btn-primary" style="padding: 15px 40px; font-size: 16px; border-radius: 12px; position: relative; overflow: hidden; transition: all 0.3s;" disabled>
+                        <span id="btnText">Lancer l'analyse</span>
+                        <span id="btnSpinner" style="display: none; margin-left: 10px;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
+                    <a href="{% url 'engine:dashboard' %}" class="btn btn-secondary" style="padding: 15px 40px; font-size: 16px; border-radius: 12px; transition: all 0.3s;">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tips card (optionnel) -->
+    <div style="margin-top: 30px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; animation: fadeInUp 0.8s ease;">
+        <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+            <i class="fas fa-lightbulb" style="color: #f1c40f; font-size: 1.5rem; margin-bottom: 10px;"></i>
+            <h4 style="font-size: 1rem; margin-bottom: 5px;">Analyse complète</h4>
+            <p style="color: #666; font-size: 0.9rem;">Toutes les tables sont analysées automatiquement</p>
+        </div>
+        <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+            <i class="fas fa-chart-line" style="color: #3498db; font-size: 1.5rem; margin-bottom: 10px;"></i>
+            <h4 style="font-size: 1rem; margin-bottom: 5px;">Score calculé</h4>
+            <p style="color: #666; font-size: 0.9rem;">Un score de qualité est généré pour la base</p>
+        </div>
+        <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+            <i class="fas fa-history" style="color: #9b59b6; font-size: 1.5rem; margin-bottom: 10px;"></i>
+            <h4 style="font-size: 1rem; margin-bottom: 5px;">Historique</h4>
+            <p style="color: #666; font-size: 0.9rem;">Tous les résultats sont sauvegardés</p>
+        </div>
+    </div>
+</div>
+
+<!-- Animations CSS -->
+<style>
+    @keyframes slideDown {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    @keyframes slideLeft {
+        from { transform: translateX(-20px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes fadeInUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Effets de survol */
+    .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-secondary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    select:hover {
+        border-color: #667eea !important;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+    }
+    
+    select:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3) !important;
+        outline: none;
+    }
+</style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#serveur').change(function() {
+        var serveurId = $(this).val();
+        if (serveurId) {
+            // Afficher l'indicateur de chargement
+            $('#loadingIndicator').show();
+            $('#base_donnees').html('<option value="">Chargement...</option>').prop('disabled', true);
+            
+            // Animation de pulsation sur le bouton
+            $('#submitBtn').css('animation', 'pulse 1s infinite');
+            
+            $.get('/moteur/ajax/get-databases/', {serveur_id: serveurId})
+                .done(function(data) {
+                    if (data.success) {
+                        var options = '<option value="">📌 -- Choisir une base --</option>';
+                        for (var i = 0; i < data.databases.length; i++) {
+                            options += '<option value="' + data.databases[i] + '">📊 ' + data.databases[i] + '</option>';
+                        }
+                        $('#base_donnees').html(options).prop('disabled', false);
+                        
+                        // Afficher le résumé avec animation
+                        $('#analyseResume').fadeIn(500);
+                    } else {
+                        $('#base_donnees').html('<option value="">❌ Erreur: ' + data.error + '</option>');
+                    }
+                    
+                    // Cacher l'indicateur de chargement
+                    $('#loadingIndicator').fadeOut(300);
+                    $('#submitBtn').css('animation', 'none');
+                });
+        } else {
+            $('#base_donnees').html('<option value="">📌 -- Sélectionnez d\'abord un serveur --</option>').prop('disabled', true);
+            $('#analyseResume').fadeOut(300);
+        }
+    });
+    
+    // Activer/désactiver le bouton selon la sélection
+    $('#base_donnees').change(function() {
+        if ($(this).val()) {
+            $('#submitBtn').prop('disabled', false).css('opacity', '1');
+        } else {
+            $('#submitBtn').prop('disabled', true).css('opacity', '0.6');
+        }
+    });
+    
+    // Animation au submit
+    $('#analyseForm').submit(function(e) {
+        if ($('#base_donnees').val()) {
+            $('#btnText').hide();
+            $('#btnSpinner').show();
+            $('#submitBtn').prop('disabled', true).css('opacity', '0.8');
+        }
+    });
+});
+
+// Fonction pour animation supplémentaire
+function showLoading(select) {
+    if (select.value) {
+        select.style.animation = 'pulse 1s';
+        setTimeout(() => {
+            select.style.animation = '';
+        }, 1000);
+    }
+}
+</script>
+{% endblock %}

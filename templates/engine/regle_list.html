@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Moteur de règles qualité</h1>
+        <a href="{% url 'engine:regle_ajouter' %}" class="btn btn-primary">
+            + Nouvelle règle
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Serveur</th>
+                        <th>Base/Table</th>
+                        <th>Type</th>
+                        <th>Dernière exécution</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for regle in regles %}
+                    <tr>
+                        <td>{{ regle.nom }}</td>
+                        <td>{{ regle.serveur.name }}</td>
+                        <td>
+                            <small>
+                                {{ regle.base_donnees }}<br>
+                                <strong>{% if regle.colonne %}{{ regle.table }}.{{ regle.colonne }}{% else %}{{ regle.table }} (table entière){% endif %}</strong>
+                            </small>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ regle.type_regle.nom }}</span>
+                        </td>
+                        <td>
+                            {% if regle.dernier_execution %}
+                                <small>{{ regle.dernier_execution|timesince }}</small>
+                            {% else %}
+                                <small class="text-muted">Jamais</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if regle.est_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'engine:regle_executer' regle.pk %}" 
+                                   class="btn btn-outline-primary" title="Exécuter">
+                                    ⚡
+                                </a>
+                                <a href="{% url 'engine:execution_list' regle.pk %}" 
+                                   class="btn btn-outline-info" title="Historique">
+                                    📊
+                                </a>
+                                <a href="{% url 'engine:regle_modifier' regle.pk %}" 
+                                   class="btn btn-outline-warning" title="Modifier">
+                                    ✏️
+                                </a>
+                                <a href="{% url 'engine:regle_supprimer' regle.pk %}" 
+                                   class="btn btn-outline-danger" title="Supprimer">
+                                    🗑️
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <p class="text-muted">Aucune règle de qualité définie</p>
+                            <a href="{% url 'engine:regle_ajouter' %}" class="btn btn-primary">
+                                Créer votre première règle
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

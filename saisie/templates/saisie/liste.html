@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des Clients</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 50px auto; padding: 20px; }
+        h1 { color: #333; border-bottom: 2px solid #28a745; padding-bottom: 10px; }
+        .btn-add { display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-bottom: 20px; }
+        .btn-add:hover { background-color: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #28a745; color: white; }
+        tr:hover { background-color: #f5f5f5; }
+        .actions { display: flex; gap: 10px; }
+        .btn-modifier { background-color: #f0ad4e; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; font-size: 14px; }
+        .btn-modifier:hover { background-color: #ec971f; }
+        .btn-supprimer { background-color: #dc3545; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; font-size: 14px; }
+        .btn-supprimer:hover { background-color: #c82333; }
+        .empty { text-align: center; color: #666; padding: 40px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>📋 Liste des clients</h1>
+    
+    <a href="{% url 'ajouter_client' %}" class="btn-add">➕ Ajouter un client</a>
+    
+    {% if clients %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Téléphone</th>
+                <th>Date d'inscription</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr>
+                <td>{{ client.nom }}</td>
+                <td>{{ client.email }}</td>
+                <td>{{ client.telephone }}</td>
+                <td>{{ client.date_creation|date:"d/m/Y H:i" }}</td>
+                <td class="actions">
+                    <a href="{% url 'modifier_client' client.id %}" class="btn-modifier">✏️ Modifier</a>
+                    <a href="{% url 'supprimer_client' client.id %}" class="btn-supprimer">🗑️ Supprimer</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Aucun client enregistré. Cliquez sur "Ajouter un client" pour commencer !</p>
+    {% endif %}
+</body>
+</html>

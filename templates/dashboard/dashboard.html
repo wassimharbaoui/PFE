@@ -1,0 +1,22 @@
+<!-- templates/dashboard/dashboard.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Tableau de bord</h1>
+<p>Bienvenue sur votre tableau de bord, {{ user.username }} !</p>
+
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+    <div style="background: white; padding: 20px; border-radius: 5px;">
+        <h3>Statistiques</h3>
+        <p>Contenu du dashboard...</p>
+    </div>
+    <div style="background: white; padding: 20px; border-radius: 5px;">
+        <h3>Activités récentes</h3>
+        <p>Contenu du dashboard...</p>
+    </div>
+    <div style="background: white; padding: 20px; border-radius: 5px;">
+        <h3>Alertes</h3>
+        <p>Contenu du dashboard...</p>
+    </div>
+</div>
+{% endblock %}

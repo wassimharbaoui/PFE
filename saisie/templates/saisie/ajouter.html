@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter un Client</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-control { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .back-link { display: inline-block; margin-top: 20px; color: #666; text-decoration: none; }
+        .back-link:hover { color: #007bff; }
+    </style>
+</head>
+<body>
+    <h1>➕ Ajouter un nouveau client</h1>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        {% for field in form %}
+        <div class="form-group">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.errors %}
+                <small style="color: red;">{{ field.errors }}</small>
+            {% endif %}
+        </div>
+        {% endfor %}
+        
+        <button type="submit">💾 Enregistrer le client</button>
+    </form>
+    
+    <a href="{% url 'liste_clients' %}" class="back-link">← Retour à la liste</a>
+</body>
+</html>

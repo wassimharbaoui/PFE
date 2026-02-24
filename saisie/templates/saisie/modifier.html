@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Modifier le Client</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        h1 { color: #f0ad4e; border-bottom: 2px solid #f0ad4e; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-control { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn-modifier { background-color: #f0ad4e; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-modifier:hover { background-color: #ec971f; }
+        .btn-annuler { background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-left: 10px; }
+        .btn-annuler:hover { background-color: #5a6268; }
+    </style>
+</head>
+<body>
+    <h1>✏️ Modifier le client : {{ client.nom }}</h1>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        {% for field in form %}
+        <div class="form-group">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.errors %}
+                <small style="color: red;">{{ field.errors }}</small>
+            {% endif %}
+        </div>
+        {% endfor %}
+        
+        <button type="submit" class="btn-modifier">💾 Enregistrer les modifications</button>
+        <a href="{% url 'liste_clients' %}" class="btn-annuler">❌ Annuler</a>
+    </form>
+</body>
+</html>

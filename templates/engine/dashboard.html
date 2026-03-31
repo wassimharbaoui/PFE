@@ -2,434 +2,201 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- En-tête avec titre et bouton (animé) -->
-    <div class="header" style="display: flex; justify-content: space-between; align-items: center; animation: slideDown 0.5s ease;">
-        <div>
-            <h1 style="display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-chart-bar" style="color: #667eea; animation: pulse 2s infinite;"></i> 
-                Tableau de bord qualité
+    <!-- En-tête -->
+    <div class="header-glass" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 30px 40px; margin-bottom: 30px; box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3); display: flex; justify-content: space-between; align-items: center;">
+        <div style="color: white;">
+            <h1 style="font-size: 2.5rem; margin-bottom: 5px; font-weight: 700;">
+                <i class="fas fa-chart-pie"></i> Quality Dashboard
             </h1>
-            <p style="color: #666; margin-top: 5px;">Analyse de la qualité des données</p>
+            <p style="opacity: 0.9; font-size: 1.1rem;">
+                <i class="fas fa-database"></i> Analyse approfondie de vos données
+            </p>
         </div>
-        <a href="{% url 'engine:lancer_analyse' %}" class="btn btn-primary" style="padding: 15px 30px; font-size: 16px; animation: slideRight 0.5s ease;">
-            <i class="fas fa-play"></i> Nouvelle analyse
+        <a href="{% url 'engine:lancer_analyse' %}" class="btn-glow" style="background: white; color: #667eea; padding: 15px 35px; border-radius: 50px; text-decoration: none; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: all 0.3s;">
+            <i class="fas fa-play-circle"></i> Nouvelle analyse
         </a>
     </div>
 
-    <!-- Cartes de statistiques avec animations -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;">
-        <!-- Carte Score Global -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; padding: 25px; color: white; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3); animation: fadeInUp 0.5s ease;">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <i class="fas fa-star" style="font-size: 2.5rem; animation: rotate 10s linear infinite;"></i>
-                <div>
-                    <p style="opacity: 0.9; margin-bottom: 5px;">Dernier score</p>
-                    <h2 style="font-size: 3rem; line-height: 1;">{{ dernier_score }}%</h2>
-                </div>
-            </div>
-        </div>
-
-        <!-- Carte Nombre d'analyses -->
-        <div style="background: white; border-radius: 15px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; animation: fadeInUp 0.6s ease;">
-            <div style="background: #e3f2fd; width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; animation: bounce 2s infinite;">
-                <i class="fas fa-history" style="color: #1976d2; font-size: 1.8rem;"></i>
+    <!-- Statistiques -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; margin-bottom: 40px;">
+        <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px;">
+            <div style="background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-server" style="color: #667eea; font-size: 1.8rem;"></i>
             </div>
             <div>
-                <p style="color: #666; margin-bottom: 5px;">Analyses</p>
-                <h3 style="color: #333; font-size: 2rem;">{{ analyses|length }}</h3>
+                <h3 style="font-size: 1.8rem; margin: 0; color: #333;">{{ serveurs|length }}</h3>
+                <p style="color: #666; margin: 0;">Serveurs</p>
             </div>
         </div>
-
-        <!-- Carte Tables analysées -->
-        <div style="background: white; border-radius: 15px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; animation: fadeInUp 0.7s ease;">
-            <div style="background: #e8f5e8; width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; animation: bounce 2s infinite 0.2s;">
-                <i class="fas fa-database" style="color: #2e7d32; font-size: 1.8rem;"></i>
+        <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px;">
+            <div style="background: linear-gradient(135deg, #27ae6020 0%, #2ecc7120 100%); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-database" style="color: #27ae60; font-size: 1.8rem;"></i>
             </div>
             <div>
-                <p style="color: #666; margin-bottom: 5px;">Tables analysées</p>
-                <h3 style="color: #333; font-size: 2rem;">{{ total_tables }}</h3>
+                <h3 style="font-size: 1.8rem; margin: 0; color: #333;">{{ analyses_bases|length }}</h3>
+                <p style="color: #666; margin: 0;">Bases</p>
             </div>
         </div>
-
-        <!-- Carte Qualité moyenne -->
-        <div style="background: white; border-radius: 15px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; animation: fadeInUp 0.8s ease;">
-            <div style="background: #fff3e0; width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; animation: bounce 2s infinite 0.4s;">
-                <i class="fas fa-chart-line" style="color: #ed6c02; font-size: 1.8rem;"></i>
+        <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px;">
+            <div style="background: linear-gradient(135deg, #f39c1220 0%, #e67e2220 100%); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-table" style="color: #f39c12; font-size: 1.8rem;"></i>
             </div>
             <div>
-                <p style="color: #666; margin-bottom: 5px;">Score moyen</p>
-                <h3 style="color: #333; font-size: 2rem;">{{ moyenne }}%</h3>
+                <h3 style="font-size: 1.8rem; margin: 0; color: #333;">{{ total_tables }}</h3>
+                <p style="color: #666; margin: 0;">Tables</p>
+            </div>
+        </div>
+        <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px;">
+            <div style="background: linear-gradient(135deg, #e74c3c20 0%, #c0392b20 100%); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-exclamation-triangle" style="color: #e74c3c; font-size: 1.8rem;"></i>
+            </div>
+            <div>
+                <h3 style="font-size: 1.8rem; margin: 0; color: #333;">{{ total_problemes }}</h3>
+                <p style="color: #666; margin: 0;">Problèmes</p>
             </div>
         </div>
     </div>
 
-    <!-- Graphique d'évolution -->
-    {% if analyses %}
-    <div class="card" style="margin-bottom: 30px; animation: fadeInUp 0.9s ease;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3><i class="fas fa-chart-line" style="color: #667eea; margin-right: 10px; animation: pulse 2s infinite;"></i>Évolution des scores</h3>
-            <span style="color: #666;">Dernières 5 analyses</span>
-        </div>
-        <div style="display: flex; align-items: flex-end; gap: 15px; height: 150px; padding: 10px 0;">
-            {% for a in analyses|slice:":5" reversed %}
-                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; animation: slideUp 0.5s ease;">
-                    <div style="width: 100%; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: {{ a.score_qualite }}px; border-radius: 8px 8px 0 0; min-height: 20px; transition: all 0.3s; animation: glow 2s infinite;"></div>
-                    <span style="font-size: 12px; color: #666;">{{ a.date_analyse|date:"d/m" }}</span>
-                    <span style="font-size: 11px; font-weight: bold; color: #333;">{{ a.score_qualite|floatformat:0 }}%</span>
+    <!-- Liste des serveurs -->
+    <div class="servers-list">
+        {% for serveur in serveurs %}
+        <div style="background: white; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #f0f0f0;">
+            <!-- En-tête serveur -->
+            <div style="padding: 20px 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleServer('{{ serveur.id }}')">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-chevron-right" id="server-icon-{{ serveur.id }}" style="font-size: 1.3rem; transition: transform 0.3s;"></i>
+                    <i class="fas fa-server" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.3rem;">{{ serveur.name }}</h3>
+                        <small>{{ serveur.ip_address }}:{{ serveur.port }}</small>
+                    </div>
                 </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Tableau des résultats -->
-    <div class="card" style="animation: fadeInUp 1s ease;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3><i class="fas fa-list" style="color: #667eea; margin-right: 10px;"></i>Historique détaillé</h3>
-            <div>
-                <select class="form-control" style="width: auto; display: inline-block; margin-right: 10px;" onchange="filterTable(this.value)">
-                    <option value="all">Toutes les bases</option>
-                    {% for a in analyses %}
-                        <option value="{{ a.base_donnees }}">{{ a.base_donnees }}</option>
-                    {% endfor %}
-                </select>
-                <button class="btn btn-info btn-sm" onclick="exportTable()">
-                    <i class="fas fa-download"></i> Exporter
-                </button>
+                <span style="background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 50px;">{{ serveur.get_databases_list|length }} bases</span>
             </div>
-        </div>
 
-        <div style="overflow-x: auto;">
-            <table class="table" id="analysisTable">
-                <thead>
-                    <tr>
-                        <th><i class="far fa-calendar-alt"></i> Date</th>
-                        <th><i class="fas fa-server"></i> Serveur</th>
-                        <th><i class="fas fa-database"></i> Base</th>
-                        <th><i class="fas fa-table"></i> Tables</th>
-                        <th><i class="fas fa-rows"></i> Lignes</th>
-                        <th><i class="fas fa-times-circle"></i> NULL</th>
-                        <th><i class="fas fa-copy"></i> Doublons</th>
-                        <th><i class="fas fa-exclamation-triangle"></i> Anomalies</th>
-                        <th><i class="fas fa-chart-pie"></i> Score</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for a in analyses %}
-                    <tr style="animation: fadeIn 0.3s ease;">
-                        <td>{{ a.date_analyse|date:"d/m/Y H:i" }}</td>
-                        <td><strong>{{ a.serveur.name }}</strong></td>
-                        <td><span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 5px;">{{ a.base_donnees }}</span></td>
-                        <td>{{ a.nombre_tables }}</td>
-                        <td>{{ a.total_lignes }}</td>
-                        <td style="color: {% if a.total_null > 0 %}#e74c3c{% else %}#27ae60{% endif %}; font-weight: bold;">
-                            {{ a.total_null }}
-                        </td>
-                        <td style="color: {% if a.total_doublons > 0 %}#e74c3c{% else %}#27ae60{% endif %}; font-weight: bold;">
-                            {{ a.total_doublons }}
-                        </td>
-                        <td style="color: {% if a.total_anomalies > 0 %}#e74c3c{% else %}#27ae60{% endif %}; font-weight: bold;">
-                            {{ a.total_anomalies }}
-                        </td>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="width: 50px; height: 6px; background: #ecf0f1; border-radius: 3px;">
-                                    <div style="width: {{ a.score_qualite }}%; height: 100%; background: {% if a.score_qualite > 90 %}linear-gradient(90deg, #2ecc71, #27ae60){% elif a.score_qualite > 70 %}linear-gradient(90deg, #f39c12, #e67e22){% else %}linear-gradient(90deg, #e74c3c, #c0392b){% endif %}; border-radius: 3px; animation: expand 1s ease;"></div>
-                                </div>
-                                <span class="badge {% if a.score_qualite > 90 %}badge-success{% elif a.score_qualite > 70 %}badge-warning{% else %}badge-danger{% endif %}" style="font-size: 14px; padding: 5px 10px;">
-                                    {{ a.score_qualite|floatformat:1 }}%
-                                </span>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="9" class="text-center py-5">
-                            <i class="fas fa-chart-bar" style="font-size: 3rem; color: #ccc; margin-bottom: 15px; display: block; animation: bounce 2s infinite;"></i>
-                            <h4 style="color: #666;">Aucune analyse effectuée</h4>
-                            <p style="color: #999; margin-bottom: 20px;">Commencez par lancer votre première analyse</p>
-                            <a href="{% url 'engine:lancer_analyse' %}" class="btn btn-primary">
-                                <i class="fas fa-play"></i> Lancer une analyse
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <!-- Bases du serveur -->
+<div id="server-{{ serveur.id }}" style="display: none; padding: 20px; background: #f8fafc;">
+    {% for analyse_base in analyses_bases %}
+        {% if analyse_base.serveur.id == serveur.id %}
+            <!-- Base trouvée dans les analyses -->
+            <div style="background: white; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 3px 10px rgba(0,0,0,0.03); overflow: hidden; border: 1px solid #e9ecef;">
+                <!-- En-tête base -->
+                <div style="padding: 18px 22px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #f8fafd; border-left: 5px solid #667eea;" onclick="toggleBase('{{ serveur.id }}-{{ analyse_base.base_donnees }}')">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <i class="fas fa-chevron-right" id="base-icon-{{ serveur.id }}-{{ analyse_base.base_donnees }}" style="color: #667eea; transition: transform 0.3s;"></i>
+                        <h4 style="margin: 0; font-size: 1.2rem; color: #2d3748;">{{ analyse_base.base_donnees }}</h4>
+                        {% if analyse_base.base_donnees not in serveur.get_databases_list %}
+                            <span style="background: #f39c12; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;">Non surveillée</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Métriques de la base -->
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center; color: #4a5568; font-size: 0.9rem;">
+                        <span>Tables: <strong>{{ analyse_base.nb_tables }}</strong></span>
+                        <span>Tables sans PK: <strong {% if analyse_base.tables_sans_pk > 0 %}style="color: #e74c3c;"{% endif %}>{{ analyse_base.tables_sans_pk }}</strong></span>
+                        <span>Tables sans index: <strong {% if analyse_base.tables_sans_index > 0 %}style="color: #e74c3c;"{% endif %}>{{ analyse_base.tables_sans_index }}</strong></span>
+                        <span>Procédures: <strong>{{ analyse_base.nb_procedures|default:"0" }}</strong></span>
+                        <span>Vues: <strong>{{ analyse_base.nb_vues|default:"0" }}</strong></span>
+                        <span>Foreign Keys: <strong>{{ analyse_base.nb_fk_total|default:"0" }}</strong></span>
+                        <span style="background: {% if analyse_base.score >= 80 %}#2ecc71{% elif analyse_base.score >= 60 %}#f39c12{% else %}#e74c3c{% endif %}; color: white; padding: 5px 12px; border-radius: 30px; font-weight: 600;">
+                            Score: {{ analyse_base.score|floatformat:0 }}%
+                        </span>
+                        <span style="color: #999;">{{ analyse_base.date_analyse|date:"d/m/Y" }}</span>
+                    </div>
+                </div>
+
+                <!-- Tables de la base -->
+                <div id="base-{{ serveur.id }}-{{ analyse_base.base_donnees }}" style="display: none; padding: 20px; background: white; border-top: 1px solid #e9ecef;">
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="background: #e9ecef;">
+                                    <th style="padding: 10px;">Table</th>
+                                    <th style="padding: 10px;">Lignes</th>
+                                    <th style="padding: 10px;">Taille</th>
+                                    <th style="padding: 10px;">PK</th>
+                                    <th style="padding: 10px;">Index</th>
+                                    <th style="padding: 10px;">FK</th>
+                                    <th style="padding: 10px;">Check</th>
+                                    <th style="padding: 10px;">NULL</th>
+                                    <th style="padding: 10px;">Doublons</th>
+                                    <th style="padding: 10px;">Utilisée</th>
+                                    <th style="padding: 10px;">Modif</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for table in tables_par_base|get_item:analyse_base.base_donnees %}
+                                <tr style="border-bottom: 1px solid #e9ecef;">
+                                    <td style="padding: 8px;">{{ table.table_name }}</td>
+                                    <td style="padding: 8px;">{{ table.nb_lignes }}</td>
+                                    <td style="padding: 8px;">{{ table.taille_mb }} MB</td>
+                                    <td style="padding: 8px; text-align: center;">{% if table.a_pk %}✓{% else %}✗{% endif %}</td>
+                                    <td style="padding: 8px; text-align: center;">{% if table.a_index %}✓{% else %}✗{% endif %}</td>
+                                    <td style="padding: 8px;">{{ table.nb_fk }}</td>
+                                    <td style="padding: 8px;">{{ table.nb_check }}</td>
+                                    <td style="padding: 8px;">{{ table.nb_nullables }}</td>
+                                    <td style="padding: 8px;">{{ table.nb_doublons }}</td>
+                                    <td style="padding: 8px; text-align: center;">{% if table.jamais_utilisee %}✗{% else %}✓{% endif %}</td>
+                                    <td style="padding: 8px;">{{ table.derniere_modification|date:"d/m/y"|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="11" style="padding: 20px; text-align: center; color: #999;">
+                                        Aucune table analysée
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
         </div>
+        {% empty %}
+        <div style="text-align: center; padding: 60px;">
+            <i class="fas fa-server" style="font-size: 4rem; color: #ccc;"></i>
+            <h3>Aucun serveur configuré</h3>
+        </div>
+        {% endfor %}
     </div>
 </div>
 
-<!-- Chatbot flottant -->
-<div id="chatbot" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
-    <!-- Bouton du chatbot -->
-    <div id="chatButton" onclick="toggleChat()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4); transition: all 0.3s;">
-        <i class="fas fa-robot" style="color: white; font-size: 30px;"></i>
-    </div>
-    
-    <!-- Fenêtre de chat (cachée par défaut) -->
-    <div id="chatWindow" style="display: none; position: absolute; bottom: 70px; right: 0; width: 350px; height: 450px; background: white; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden; animation: slideUp 0.3s ease;">
-        
-        <!-- En-tête du chat -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px; color: white;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-robot" style="font-size: 24px;"></i>
-                <div>
-                    <h4 style="margin: 0;">Assistant Data Quality</h4>
-                    <small style="opacity: 0.9;">Posez vos questions</small>
-                </div>
-                <i class="fas fa-times" onclick="toggleChat()" style="margin-left: auto; cursor: pointer; font-size: 20px;"></i>
-            </div>
-        </div>
-        
-        <!-- Zone des messages -->
-        <div id="chatMessages" style="height: 300px; overflow-y: auto; padding: 15px; background: #f8f9fa;">
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-robot" style="color: white; font-size: 14px;"></i>
-                </div>
-                <div style="background: white; padding: 10px 15px; border-radius: 15px 15px 15px 0; max-width: 80%;">
-                    👋 Bonjour ! Je suis votre assistant. Posez-moi des questions sur les scores, les NULL, les doublons ou les anomalies.
-                </div>
-            </div>
-        </div>
-        
-        <!-- Zone de saisie -->
-        <div style="padding: 15px; border-top: 1px solid #e9ecef; display: flex; gap: 10px;">
-            <input type="text" id="chatInput" placeholder="Posez votre question..." class="form-control" style="flex: 1;" onkeypress="if(event.keyCode==13) sendMessage()">
-            <button onclick="sendMessage()" class="btn btn-primary" style="border-radius: 10px;">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Animations CSS -->
-<style>
-    @keyframes slideDown {
-        from { transform: translateY(-30px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-    
-    @keyframes slideRight {
-        from { transform: translateX(30px); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideUp {
-        from { transform: translateY(30px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-    
-    @keyframes fadeInUp {
-        from { transform: translateY(20px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
-    }
-    
-    @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
-    }
-    
-    @keyframes rotate {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-    
-    @keyframes expand {
-        from { width: 0; }
-        to { width: 100%; }
-    }
-    
-    @keyframes glow {
-        0%, 100% { filter: brightness(1); }
-        50% { filter: brightness(1.2); }
-    }
-    
-    /* Effets de survol */
-    .card {
-        transition: all 0.3s ease;
-    }
-    
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 40px rgba(0,0,0,0.15) !important;
-    }
-    
-    .btn-primary:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4) !important;
-    }
-    
-    tr {
-        transition: all 0.3s ease;
-    }
-    
-    tr:hover {
-        background: #f8f9fa;
-        transform: scale(1.01);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-</style>
-
-<!-- JavaScript pour les fonctionnalités -->
 <script>
-var csrfToken = '{{ csrf_token }}';
-
-function filterTable(baseName) {
-    var rows = document.querySelectorAll('#analysisTable tbody tr');
-    rows.forEach(function(row) {
-        if (baseName === 'all') {
-            row.style.display = '';
-            row.style.animation = 'fadeIn 0.3s ease';
-        } else {
-            var base = row.cells[2].innerText;
-            if (base === baseName) {
-                row.style.display = '';
-                row.style.animation = 'fadeIn 0.3s ease';
-            } else {
-                row.style.display = 'none';
-            }
-        }
-    });
-}
-
-function exportTable() {
-    var csv = [];
-    var rows = document.querySelectorAll('#analysisTable tr');
-    
-    for (var i = 0; i < rows.length; i++) {
-        var row = [], cols = rows[i].querySelectorAll('td, th');
-        for (var j = 0; j < cols.length; j++) {
-            var text = cols[j].innerText.replace(/,/g, '');
-            row.push('"' + text + '"');
-        }
-        csv.push(row.join(','));
-    }
-    
-    var csvContent = csv.join('\n');
-    var blob = new Blob([csvContent], { type: 'text/csv' });
-    var url = window.URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'analyse_qualite.csv';
-    a.click();
-}
-
-function toggleChat() {
-    var chatWindow = document.getElementById('chatWindow');
-    var chatButton = document.getElementById('chatButton');
-    
-    if (chatWindow.style.display === 'none' || chatWindow.style.display === '') {
-        chatWindow.style.display = 'block';
-        chatButton.style.transform = 'scale(0.9)';
+function toggleServer(serverId) {
+    var element = document.getElementById('server-' + serverId);
+    var icon = document.getElementById('server-icon-' + serverId);
+    if (element.style.display === 'none' || element.style.display === '') {
+        element.style.display = 'block';
+        icon.style.transform = 'rotate(90deg)';
     } else {
-        chatWindow.style.display = 'none';
-        chatButton.style.transform = 'scale(1)';
+        element.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
     }
 }
 
-function sendMessage() {
-    var input = document.getElementById('chatInput');
-    var message = input.value.trim();
-    
-    if (message === '') return;
-    
-    // Ajouter le message de l'utilisateur
-    addMessage('user', message);
-    input.value = '';
-    
-    // Montrer que le robot écrit
-    addTypingIndicator();
-    
-    // Envoyer à l'API
-    fetch('/moteur/chatbot-api/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-        },
-        body: JSON.stringify({question: message})
-    })
-    .then(response => response.json())
-    .then(data => {
-        removeTypingIndicator();
-        addMessage('bot', data.response);
-    })
-    .catch(error => {
-        removeTypingIndicator();
-        addMessage('bot', '❌ Désolé, une erreur est survenue.');
-    });
-}
-
-function addMessage(sender, text) {
-    var messages = document.getElementById('chatMessages');
-    var messageDiv = document.createElement('div');
-    messageDiv.style.display = 'flex';
-    messageDiv.style.gap = '10px';
-    messageDiv.style.marginBottom = '15px';
-    messageDiv.style.animation = 'fadeIn 0.3s ease';
-    
-    if (sender === 'user') {
-        messageDiv.style.justifyContent = 'flex-end';
-        messageDiv.innerHTML = `
-            <div style="background: #667eea; color: white; padding: 10px 15px; border-radius: 15px 15px 0 15px; max-width: 80%;">
-                ${text}
-            </div>
-            <div style="background: #667eea; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <i class="fas fa-user" style="color: white; font-size: 14px;"></i>
-            </div>
-        `;
+function toggleBase(baseId) {
+    var element = document.getElementById('base-' + baseId);
+    var icon = document.getElementById('base-icon-' + baseId);
+    if (element.style.display === 'none' || element.style.display === '') {
+        element.style.display = 'block';
+        icon.style.transform = 'rotate(90deg)';
     } else {
-        messageDiv.innerHTML = `
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <i class="fas fa-robot" style="color: white; font-size: 14px;"></i>
-            </div>
-            <div style="background: white; padding: 10px 15px; border-radius: 15px 15px 15px 0; max-width: 80%; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                ${text}
-            </div>
-        `;
+        element.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
     }
-    
-    messages.appendChild(messageDiv);
-    messages.scrollTop = messages.scrollHeight;
-}
-
-function addTypingIndicator() {
-    var messages = document.getElementById('chatMessages');
-    var typingDiv = document.createElement('div');
-    typingDiv.id = 'typingIndicator';
-    typingDiv.style.display = 'flex';
-    typingDiv.style.gap = '10px';
-    typingDiv.style.marginBottom = '15px';
-    typingDiv.innerHTML = `
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-            <i class="fas fa-robot" style="color: white; font-size: 14px;"></i>
-        </div>
-        <div style="background: white; padding: 15px; border-radius: 15px 15px 15px 0;">
-            <i class="fas fa-circle" style="color: #667eea; font-size: 8px; animation: bounce 1s infinite;"></i>
-            <i class="fas fa-circle" style="color: #667eea; font-size: 8px; animation: bounce 1s infinite 0.2s;"></i>
-            <i class="fas fa-circle" style="color: #667eea; font-size: 8px; animation: bounce 1s infinite 0.4s;"></i>
-        </div>
-    `;
-    messages.appendChild(typingDiv);
-    messages.scrollTop = messages.scrollHeight;
-}
-
-function removeTypingIndicator() {
-    var typing = document.getElementById('typingIndicator');
-    if (typing) typing.remove();
 }
 </script>
+
+<style>
+    .btn-glow:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.6) !important;
+    }
+    div[onclick] {
+        cursor: pointer;
+    }
+</style>
 {% endblock %}

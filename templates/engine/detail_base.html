@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1>
+                <i class="fas fa-database" style="color: #667eea;"></i>
+                Détail de la base : {{ base_nom }}
+            </h1>
+            <p>
+                {% if derniere_base %}
+                    {{ derniere_base.nb_tables }} tables analysées
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'engine:dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    {% if derniere_base %}
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
+        <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+            <i class="fas fa-key" style="color: #f39c12;"></i>
+            <h3>{{ derniere_base.tables_sans_pk }}</h3>
+            <p>Tables sans PK</p>
+        </div>
+        <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+            <i class="fas fa-index" style="color: #3498db;"></i>
+            <h3>{{ derniere_base.tables_sans_index }}</h3>
+            <p>Tables sans index</p>
+        </div>
+        <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+            <i class="fas fa-clock" style="color: #e74c3c;"></i>
+            <h3>{{ derniere_base.tables_jamais_utilisees }}</h3>
+            <p>Tables jamais utilisées</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">
+            <h3>Tables de la base</h3>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Table</th>
+                        <th>PK</th>
+                        <th>Index</th>
+                        <th>FK</th>
+                        <th>Check</th>
+                        <th>Colonnes</th>
+                        <th>NULL</th>
+                        <th>Lignes</th>
+                        <th>Taille</th>
+                        <th>Procédures</th>
+                        <th>Vues</th>
+                        <th>Utilisée</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in analyses %}
+                    <tr>
+                        <td><strong>{{ a.table_name }}</strong></td>
+                        <td>
+                            {% if a.a_pk %}
+                                <span style="color: #27ae60;">✅</span>
+                            {% else %}
+                                <span style="color: #e74c3c;">❌</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if a.a_index %}
+                                <span style="color: #27ae60;">✅</span>
+                            {% else %}
+                                <span style="color: #e74c3c;">❌</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ a.nb_fk }}</td>
+                        <td>{{ a.nb_check }}</td>
+                        <td>{{ a.nb_colonnes }}</td>
+                        <td>{{ a.nb_nullables }}</td>
+                        <td>{{ a.nb_lignes }}</td>
+                        <td>{{ a.taille_mb }} MB</td>
+                        <td>{{ a.nb_procedures }}</td>
+                        <td>{{ a.nb_vues }}</td>
+                        <td>
+                            {% if a.jamais_utilisee %}
+                                <span style="color: #e74c3c;">Jamais</span>
+                            {% else %}
+                                <span style="color: #27ae60;">Utilisée</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="12" class="text-center">
+                            Aucune analyse trouvée
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

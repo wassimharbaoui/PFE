@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from .models import Server
 from .forms import ServerForm
-from engine.models import AnalyseResultat  # ← IMPORTANT: Ajoute cette ligne
+from engine.models import AnalyseBase  # ← Remplacé par AnalyseBase # ← IMPORTANT: Ajoute cette ligne
 import pyodbc
 
 @login_required
@@ -16,8 +16,8 @@ def server_list(request):
     for server in servers:
         total_bases += len(server.get_databases_list())
     
-    # Calculer le nombre total d'analyses effectuées
-    total_analyses = AnalyseResultat.objects.count()
+    # Calculer le nombre total d'analyses (avec le nouveau modèle)
+    total_analyses = AnalyseBase.objects.count()  # ← Changé ici
     
     return render(request, 'servers/server_list.html', {
         'servers': servers,

@@ -1,190 +1,237 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.template.defaulttags import register
 import pyodbc
 import json
-from .models import AnalyseResultat
+from .models import AnalyseTable, AnalyseBase
+from .analyser import AnalyseurTables
 from servers.models import Server
+
+from django import template
+register = template.Library()
+
+@register.filter
+def filter_by_serveur_base(analyses_bases, serveur_id_base):
+    """Filtre les analyses par serveur et base"""
+    serveur_id, base_nom = serveur_id_base.split('|')
+    return analyses_bases.filter(
+        serveur_id=int(serveur_id),
+        base_donnees=base_nom
+    ).first()
 
 @login_required
 def dashboard(request):
-    analyses = AnalyseResultat.objects.all().order_by('-date_analyse')[:20]
-    derniere = analyses.first()
+    """Tableau de bord avec résumé des bases et détails des tables"""
     
-    # Calculer le total des tables analysées
-    total_tables = 0
-    somme_scores = 0
-    for a in analyses:
-        total_tables += a.nombre_tables
-        somme_scores += a.score_qualite
+    # Récupérer TOUS les serveurs
+    serveurs = Server.objects.all()  # ← AJOUTE CETTE LIGNE
     
-    # Calculer la moyenne des scores
-    if analyses:
-        moyenne = round(somme_scores / len(analyses), 1)
-    else:
-        moyenne = 0
+    # Récupérer toutes les analyses de bases (résumé)
+    analyses_bases = AnalyseBase.objects.all().order_by('-date_analyse')
+    
+    # Récupérer toutes les tables analysées
+    tables = AnalyseTable.objects.all().order_by('-date_analyse')
+    
+    # Organiser les tables par base
+    tables_par_base = {}
+    for table in tables:
+        if table.base_donnees not in tables_par_base:
+            tables_par_base[table.base_donnees] = []
+        tables_par_base[table.base_donnees].append(table)
+    
+    # Calculer les statistiques pour les cartes
+    total_tables = tables.count()
+    total_problemes = 0
+    for ab in analyses_bases:
+        total_problemes += ab.tables_sans_pk + ab.tables_sans_index + ab.tables_jamais_utilisees
+    
+    # Filtre personnalisé
+    from django.template.defaulttags import register
+    @register.filter
+    def get_item(dictionary, key):
+        return dictionary.get(key)
     
     return render(request, 'engine/dashboard.html', {
-        'analyses': analyses,
-        'dernier_score': derniere.score_qualite if derniere else 100,
+        'serveurs': serveurs,  # ← AJOUTE ICI
+        'analyses_bases': analyses_bases,
+        'tables_par_base': tables_par_base,
         'total_tables': total_tables,
-        'moyenne': moyenne,
+        'total_problemes': total_problemes,
         'active_menu': 'dashboard'
     })
-
 @login_required
 def lancer_analyse(request):
     if request.method == 'POST':
         serveur_id = request.POST.get('serveur')
-        base_donnees = request.POST.get('base_donnees')
+        
+        # Récupérer les bases sélectionnées
+        bases_list = request.POST.getlist('bases')
+        
+        if not bases_list:
+            messages.error(request, "❌ Veuillez sélectionner au moins une base")
+            return redirect('engine:lancer_analyse')
         
         try:
             serveur = Server.objects.get(id=serveur_id)
+            bases_analysees = []
             
-            conn_str = (
-                f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-                f"SERVER={serveur.ip_address},{serveur.port};"
-                f"DATABASE={base_donnees};"
-                f"UID={serveur.username};"
-                f"PWD={serveur.password};"
-                f"TrustServerCertificate=yes;"
-            )
-            
-            conn = pyodbc.connect(conn_str, timeout=30)
-            cursor = conn.cursor()
-            
-            # Récupérer toutes les tables
-            cursor.execute("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'")
-            tables = [row[0] for row in cursor.fetchall()]
-            
-            total_lignes = 0
-            total_null = 0
-            total_doublons = 0
-            total_anomalies = 0
-            
-            for table in tables:
-                try:
-                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                    lignes = cursor.fetchone()[0]
-                    total_lignes += lignes
-                    
-                    if lignes > 0:
-                        cursor.execute(f"SELECT TOP 0 * FROM {table}")
-                        colonnes = [col[0] for col in cursor.description]
-                        
-                        for col in colonnes:
-                            cursor.execute(f"SELECT COUNT(*) FROM {table} WHERE {col} IS NULL")
-                            total_null += cursor.fetchone()[0]
-                        
-                        if len(colonnes) > 0:
-                            cols_str = ','.join(colonnes)
-                            cursor.execute(f"SELECT COUNT(*) - COUNT(DISTINCT CONCAT({cols_str})) FROM {table}")
-                            total_doublons += cursor.fetchone()[0] or 0
-                        
-                        cursor.execute(f"""
-                            SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-                            WHERE TABLE_NAME = '{table}' 
-                            AND DATA_TYPE IN ('int', 'decimal', 'float', 'money')
-                        """)
-                        for col in [r[0] for r in cursor.fetchall()]:
-                            cursor.execute(f"SELECT COUNT(*) FROM {table} WHERE {col} < 0")
-                            total_anomalies += cursor.fetchone()[0] or 0
-                            
-                except Exception as e:
-                    print(f"Erreur sur table {table}: {e}")
-                    continue
-            
-            conn.close()
-            
-            if total_lignes > 0:
-                max_erreurs = total_lignes * 3
-                total_erreurs = total_null + total_doublons + total_anomalies
-                score = 100 - (min(total_erreurs, max_erreurs) / max_erreurs * 100)
-                score = round(max(0, min(100, score)), 2)
-            else:
+            for base_donnees in bases_list:
+                # Lancer l'analyseur
+                analyseur = AnalyseurTables(serveur, base_donnees)
+                analyseur.connecter()
+                tables_data = analyseur.analyser_toutes_tables()
+                analyseur.fermer()
+                
+                # Sauvegarder les résultats des tables
+                tables_sans_pk = 0
+                tables_sans_index = 0
+                tables_jamais_utilisees = 0
+                total_fk = 0
+                total_procedures = 0
+                total_vues = 0
+                
+                for data in tables_data:
+                    # Création de l'analyse table
+                    AnalyseTable.objects.create(
+                        serveur=serveur,
+                        base_donnees=base_donnees,
+                        **data
+                    )
+                    if not data['a_pk']:
+                        tables_sans_pk += 1
+                    if not data['a_index']:
+                        tables_sans_index += 1
+                    if data['jamais_utilisee']:
+                        tables_jamais_utilisees += 1
+                    total_fk += data['nb_fk']
+                    total_procedures += data['nb_procedures']
+                    total_vues += data['nb_vues']
+                
+                # NOUVEAU CALCUL DU SCORE
                 score = 100
+                for data in tables_data:
+                    # Pénalités par table
+                    if not data['a_pk']:
+                        score -= 5
+                    if not data['a_index']:
+                        score -= 3
+                    if data['jamais_utilisee']:
+                        score -= 2
+                    
+                    # Bonus
+                    score += min(data['nb_fk'] * 2, 5)
+                    score += min(data['nb_check'] * 2, 3)
+                    score += min(data['nb_procedures'], 3)
+                    score += min(data['nb_vues'], 2)
+                    
+                    # Pénalités sur les données
+                    if data['nb_lignes'] > 0:
+                        # Doublons
+                        ratio_doublons = data['nb_doublons'] / data['nb_lignes']
+                        if ratio_doublons > 0.1:
+                            score -= 3
+                        elif ratio_doublons > 0.05:
+                            score -= 2
+                        elif ratio_doublons > 0.01:
+                            score -= 1
+                        
+                        # Colonnes NULLables
+                        if data['nb_colonnes'] > 0:
+                            ratio_null = data['nb_nullables'] / data['nb_colonnes']
+                            if ratio_null > 0.5:
+                                score -= 2
+                            elif ratio_null > 0.3:
+                                score -= 1
+
+                score = max(0, min(100, round(score, 2)))
+                
+                # CRÉATION DE L'ANALYSE BASE
+                AnalyseBase.objects.create(
+                    serveur=serveur,
+                    base_donnees=base_donnees,
+                    nb_tables=len(tables_data),
+                    tables_sans_pk=tables_sans_pk,
+                    tables_sans_index=tables_sans_index,
+                    tables_jamais_utilisees=tables_jamais_utilisees,
+                    nb_procedures=total_procedures,
+                    nb_vues=total_vues,
+                    nb_fk_total=total_fk,
+                    score=score
+                )
+                
+                bases_analysees.append(base_donnees)
+                print(f"✅ Base {base_donnees} sauvegardée avec score {score}")
             
-            AnalyseResultat.objects.create(
-                serveur=serveur,
-                base_donnees=base_donnees,
-                nombre_tables=len(tables),
-                total_lignes=total_lignes,
-                total_null=total_null,
-                total_doublons=total_doublons,
-                total_anomalies=total_anomalies,
-                score_qualite=score
-            )
-            
-            messages.success(request, f"✅ Analyse terminée - Score: {score}%")
+            messages.success(request, f"✅ Analyse terminée - {len(bases_analysees)} base(s) analysée(s): {', '.join(bases_analysees)}")
+            return redirect('engine:dashboard')
             
         except Exception as e:
             messages.error(request, f"❌ Erreur: {str(e)}")
-        
-        return redirect('engine:dashboard')
+            return redirect('engine:lancer_analyse')
     
     serveurs = Server.objects.filter(is_active=True)
     return render(request, 'engine/lancer.html', {
         'serveurs': serveurs,
         'active_menu': 'moteur'
     })
+    
+
+@login_required
+def detail_base(request, base_nom):
+    """Détail d'une base avec toutes ses tables"""
+    analyses = AnalyseTable.objects.filter(
+        base_donnees=base_nom
+    ).order_by('-date_analyse', 'table_name')[:100]
+    
+    # Dernière analyse de la base
+    derniere_base = AnalyseBase.objects.filter(
+        base_donnees=base_nom
+    ).first()
+    
+    context = {
+        'base_nom': base_nom,
+        'analyses': analyses,
+        'derniere_base': derniere_base,
+        'active_menu': 'dashboard'
+    }
+    return render(request, 'engine/detail_base.html', context)
 
 @login_required
 def get_databases_ajax(request):
-    """Récupère les bases de données d'un serveur (celles associées au serveur)"""
+    """Récupère les bases de données d'un serveur"""
     serveur_id = request.GET.get('serveur_id')
     
     try:
         serveur = Server.objects.get(id=serveur_id)
-        
-        # Récupérer les bases associées au serveur
         bases_associees = serveur.get_databases_list()
-        
         return JsonResponse({'success': True, 'databases': bases_associees})
-        
     except Exception as e:
-       
-     return JsonResponse({'success': False, 'error': str(e)})
-    
+        return JsonResponse({'success': False, 'error': str(e)})
+
 @login_required
 def chatbot_api(request):
-    """API simple pour le chatbot"""
+    """API pour le chatbot"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             question = data.get('question', '').lower()
             
-            # Réponses basées sur des mots-clés
-            if 'null' in question or 'valeur vide' in question or 'manquant' in question:
-                response = "🔍 Les valeurs NULL sont des données manquantes. Dans votre dashboard, la colonne 'NULL' montre combien de valeurs vides ont été trouvées."
-            
-            elif 'score' in question or 'note' in question:
-                response = "📊 Le score est calculé ainsi : 100 - (nombre d'erreurs / (lignes × 3) × 100). Plus le score est proche de 100%, meilleure est la qualité de vos données."
-            
-            elif 'doublon' in question or 'double' in question or 'unique' in question:
-                response = "🔄 Les doublons sont des lignes identiques. Ils sont détectés en comparant toutes les colonnes. Moins il y a de doublons, mieux c'est !"
-            
-            elif 'anomalie' in question or 'negatif' in question or 'négatif' in question:
-                response = "⚠️ Les anomalies sont des valeurs négatives dans les colonnes numériques (âge, prix, quantité, etc.). Cela peut indiquer des erreurs de saisie."
-            
-            elif 'table' in question or 'combien de table' in question:
-                response = "📁 Le nombre de tables analysées est affiché dans votre dashboard. Chaque table est analysée automatiquement."
-            
-            elif 'base' in question or 'database' in question:
-                response = "💾 Vous pouvez analyser différentes bases de données. Sélectionnez un serveur, puis une base dans le menu 'Moteur'."
-            
-            elif 'bonjour' in question or 'salut' in question or 'hello' in question:
-                response = "👋 Bonjour ! Je suis votre assistant Data Quality. Posez-moi des questions sur les scores, les NULL, les doublons ou les anomalies."
-            
+            if 'null' in question:
+                response = "🔍 Les valeurs NULL sont des données manquantes."
+            elif 'table' in question:
+                response = "📁 Chaque table est analysée (PK, index, taille, etc.)"
+            elif 'base' in question:
+                response = "💾 Vous pouvez analyser différentes bases"
+            elif 'bonjour' in question:
+                response = "👋 Bonjour ! Je suis votre assistant"
             elif 'merci' in question:
-                response = "😊 Avec plaisir ! N'hésitez pas si vous avez d'autres questions."
-            
+                response = "😊 Avec plaisir !"
             else:
-                response = "🤔 Je n'ai pas compris votre question. Essayez de demander : 'Comment est calculé le score ?', 'C'est quoi les valeurs NULL ?', 'Que sont les anomalies ?'"
+                response = "🤔 Posez-moi des questions sur les tables, bases, NULL..."
             
             return JsonResponse({'response': response, 'success': True})
-            
         except Exception as e:
             return JsonResponse({'response': f"Erreur: {str(e)}", 'success': False})
-    
     return JsonResponse({'response': 'Méthode non autorisée', 'success': False})

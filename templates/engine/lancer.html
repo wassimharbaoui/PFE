@@ -23,8 +23,8 @@
                     <i class="fas fa-cogs" style="font-size: 2.5rem;"></i>
                 </div>
                 <div>
-                    <h2 style="margin: 0; font-size: 2rem;">Analyser une base de données</h2>
-                    <p style="margin: 5px 0 0 0; opacity: 0.9;">Sélectionnez un serveur et une base pour commencer</p>
+                    <h2 style="margin: 0; font-size: 2rem;">Analyser des bases de données</h2>
+                    <p style="margin: 5px 0 0 0; opacity: 0.9;">Sélectionnez un serveur et une ou plusieurs bases à analyser</p>
                 </div>
             </div>
         </div>
@@ -48,50 +48,33 @@
                     </select>
                 </div>
 
-                <!-- Sélection de la base (avec animation de chargement) -->
+                <!-- Sélection multiple des bases (sans Ctrl, par clic) -->
                 <div style="margin-bottom: 30px; animation: slideLeft 0.6s ease;" id="databaseSection">
                     <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #333;">
                         <i class="fas fa-database" style="color: #667eea; margin-right: 8px;"></i>
-                        Base de données
+                        Bases de données (cliquez pour sélectionner)
                     </label>
-                    <select name="base_donnees" id="base_donnees" class="form-control" required disabled style="padding: 15px; border-radius: 12px; border: 2px solid #e9ecef; transition: all 0.3s; font-size: 16px;">
-                        <option value="">📌 -- Sélectionnez d'abord un serveur --</option>
-                    </select>
                     
-                    <!-- Indicateur de chargement (caché par défaut) -->
+                    <!-- Conteneur pour les cases à cocher -->
+                    <div id="basesContainer" style="border: 2px solid #e9ecef; border-radius: 12px; padding: 20px; max-height: 300px; overflow-y: auto; background: #f8f9fa;">
+                        <!-- Les bases seront chargées ici par AJAX -->
+                        <div class="text-center text-muted" id="loadingMessage">
+                            Sélectionnez d'abord un serveur
+                        </div>
+                    </div>
+                    
+                    <!-- Indicateur de chargement -->
                     <div id="loadingIndicator" style="display: none; margin-top: 15px; text-align: center;">
                         <div style="display: inline-block; animation: spin 1s linear infinite;">
                             <i class="fas fa-spinner fa-spin" style="color: #667eea; font-size: 1.5rem;"></i>
                         </div>
                         <span style="margin-left: 10px; color: #666;">Chargement des bases...</span>
                     </div>
-                </div>
-
-                <!-- Résumé de l'analyse (apparaît après sélection) -->
-                <div id="analyseResume" style="background: #f8f9fa; border-radius: 15px; padding: 20px; margin-bottom: 30px; display: none; animation: fadeIn 0.5s ease;">
-                    <h4 style="color: #333; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-clipboard-check" style="color: #27ae60;"></i>
-                        Résumé de l'analyse
-                    </h4>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                        <div style="text-align: center;">
-                            <div style="background: #e3f2fd; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
-                                <i class="fas fa-search" style="color: #1976d2;"></i>
-                            </div>
-                            <small style="color: #666;">NULL</small>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="background: #e8f5e8; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
-                                <i class="fas fa-copy" style="color: #2e7d32;"></i>
-                            </div>
-                            <small style="color: #666;">Doublons</small>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="background: #fff3e0; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
-                                <i class="fas fa-exclamation-triangle" style="color: #ed6c02;"></i>
-                            </div>
-                            <small style="color: #666;">Anomalies</small>
-                        </div>
+                    
+                    <!-- Résumé des bases sélectionnées -->
+                    <div id="selectionSummary" style="display: none; margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px;">
+                        <h5 style="margin: 0 0 10px 0; color: #1976d2;"><i class="fas fa-check-circle"></i> Bases sélectionnées :</h5>
+                        <div id="selectedBasesList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
                     </div>
                 </div>
 
@@ -111,17 +94,17 @@
         </div>
     </div>
 
-    <!-- Tips card (optionnel) -->
+    <!-- Tips card -->
     <div style="margin-top: 30px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; animation: fadeInUp 0.8s ease;">
         <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
             <i class="fas fa-lightbulb" style="color: #f1c40f; font-size: 1.5rem; margin-bottom: 10px;"></i>
-            <h4 style="font-size: 1rem; margin-bottom: 5px;">Analyse complète</h4>
-            <p style="color: #666; font-size: 0.9rem;">Toutes les tables sont analysées automatiquement</p>
+            <h4 style="font-size: 1rem; margin-bottom: 5px;">Analyse multiple</h4>
+            <p style="color: #666; font-size: 0.9rem;">Vous pouvez analyser plusieurs bases à la fois</p>
         </div>
         <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
             <i class="fas fa-chart-line" style="color: #3498db; font-size: 1.5rem; margin-bottom: 10px;"></i>
             <h4 style="font-size: 1rem; margin-bottom: 5px;">Score calculé</h4>
-            <p style="color: #666; font-size: 0.9rem;">Un score de qualité est généré pour la base</p>
+            <p style="color: #666; font-size: 0.9rem;">Un score de qualité est généré pour chaque base</p>
         </div>
         <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
             <i class="fas fa-history" style="color: #9b59b6; font-size: 1.5rem; margin-bottom: 10px;"></i>
@@ -169,7 +152,6 @@
         to { transform: rotate(360deg); }
     }
     
-    /* Effets de survol */
     .btn-primary:hover {
         transform: translateY(-3px);
         box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
@@ -190,6 +172,42 @@
         box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3) !important;
         outline: none;
     }
+    
+    /* Style pour les cases à cocher */
+    .base-checkbox-item {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 12px 15px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .base-checkbox-item:hover {
+        border-color: #667eea;
+        background: #f0f4ff;
+        transform: translateX(5px);
+    }
+    
+    .base-checkbox-item.selected {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .base-checkbox-item.selected i {
+        color: white !important;
+    }
+    
+    .base-checkbox-item input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
 </style>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -200,7 +218,7 @@ $(document).ready(function() {
         if (serveurId) {
             // Afficher l'indicateur de chargement
             $('#loadingIndicator').show();
-            $('#base_donnees').html('<option value="">Chargement...</option>').prop('disabled', true);
+            $('#basesContainer').html('<div class="text-center">Chargement des bases...</div>');
             
             // Animation de pulsation sur le bouton
             $('#submitBtn').css('animation', 'pulse 1s infinite');
@@ -208,16 +226,18 @@ $(document).ready(function() {
             $.get('/moteur/ajax/get-databases/', {serveur_id: serveurId})
                 .done(function(data) {
                     if (data.success) {
-                        var options = '<option value="">📌 -- Choisir une base --</option>';
+                        // Créer des cases à cocher pour chaque base
+                        var html = '';
                         for (var i = 0; i < data.databases.length; i++) {
-                            options += '<option value="' + data.databases[i] + '">📊 ' + data.databases[i] + '</option>';
+                            html += '<div class="base-checkbox-item" onclick="toggleBase(this, \'' + data.databases[i] + '\')">';
+                            html += '<input type="checkbox" name="bases" value="' + data.databases[i] + '" style="display: none;">';
+                            html += '<i class="fas fa-database" style="color: #667eea;"></i>';
+                            html += '<span>' + data.databases[i] + '</span>';
+                            html += '</div>';
                         }
-                        $('#base_donnees').html(options).prop('disabled', false);
-                        
-                        // Afficher le résumé avec animation
-                        $('#analyseResume').fadeIn(500);
+                        $('#basesContainer').html(html);
                     } else {
-                        $('#base_donnees').html('<option value="">❌ Erreur: ' + data.error + '</option>');
+                        $('#basesContainer').html('<div class="alert alert-danger">Erreur: ' + data.error + '</div>');
                     }
                     
                     // Cacher l'indicateur de chargement
@@ -225,29 +245,56 @@ $(document).ready(function() {
                     $('#submitBtn').css('animation', 'none');
                 });
         } else {
-            $('#base_donnees').html('<option value="">📌 -- Sélectionnez d\'abord un serveur --</option>').prop('disabled', true);
-            $('#analyseResume').fadeOut(300);
-        }
-    });
-    
-    // Activer/désactiver le bouton selon la sélection
-    $('#base_donnees').change(function() {
-        if ($(this).val()) {
-            $('#submitBtn').prop('disabled', false).css('opacity', '1');
-        } else {
-            $('#submitBtn').prop('disabled', true).css('opacity', '0.6');
+            $('#basesContainer').html('<div class="text-center text-muted">Sélectionnez d\'abord un serveur</div>');
+            $('#selectionSummary').hide();
         }
     });
     
     // Animation au submit
     $('#analyseForm').submit(function(e) {
-        if ($('#base_donnees').val()) {
+        var checkedCount = $('input[name="bases"]:checked').length;
+        if (checkedCount > 0) {
             $('#btnText').hide();
             $('#btnSpinner').show();
             $('#submitBtn').prop('disabled', true).css('opacity', '0.8');
+        } else {
+            e.preventDefault();
+            alert('Veuillez sélectionner au moins une base');
         }
     });
 });
+
+// Fonction pour basculer la sélection d'une base
+function toggleBase(element, baseName) {
+    var checkbox = $(element).find('input[type="checkbox"]');
+    if (checkbox.prop('checked')) {
+        checkbox.prop('checked', false);
+        $(element).removeClass('selected');
+    } else {
+        checkbox.prop('checked', true);
+        $(element).addClass('selected');
+    }
+    
+    // Mettre à jour le résumé
+    updateSummary();
+}
+
+// Mettre à jour le résumé des bases sélectionnées
+function updateSummary() {
+    var selected = $('input[name="bases"]:checked');
+    if (selected.length > 0) {
+        var html = '';
+        selected.each(function() {
+            html += '<span style="background: white; color: #667eea; padding: 5px 15px; border-radius: 30px; font-size: 0.9rem; border: 1px solid #667eea;">' + $(this).val() + '</span>';
+        });
+        $('#selectedBasesList').html(html);
+        $('#selectionSummary').show();
+        $('#submitBtn').prop('disabled', false);
+    } else {
+        $('#selectionSummary').hide();
+        $('#submitBtn').prop('disabled', true);
+    }
+}
 
 // Fonction pour animation supplémentaire
 function showLoading(select) {

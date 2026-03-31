@@ -1,12 +1,9 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from django.contrib.auth import logout
-from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from servers.models import Server
-from engine.models import AnalyseResultat
-
+from engine.models import AnalyseBase  # ← Changé ici (plus AnalyseResultat)
 
 @login_required
 def welcome(request):
@@ -17,7 +14,7 @@ def welcome(request):
     for server in Server.objects.all():
         databases_count += len(server.get_databases_list())
     
-    analyses_count = AnalyseResultat.objects.count()
+    analyses_count = AnalyseBase.objects.count()  # ← Changé ici
     
     return render(request, 'welcome.html', {
         'servers_count': servers_count,
@@ -34,7 +31,7 @@ def login_view(request):
         
         if user is not None:
             login(request, user)
-            return redirect('welcome')  # ← Changé ici (au lieu de 'engine:dashboard')
+            return redirect('welcome')
         else:
             messages.error(request, 'Nom d\'utilisateur ou mot de passe incorrect')
     

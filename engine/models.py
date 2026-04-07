@@ -1,6 +1,7 @@
 from django.db import models
 from servers.models import Server
 
+
 class AnalyseTable(models.Model):
     # Contexte
     serveur = models.ForeignKey(Server, on_delete=models.CASCADE)
@@ -38,6 +39,7 @@ class AnalyseTable(models.Model):
     def __str__(self):
         return f"{self.base_donnees}.{self.table_name}"
 
+
 class AnalyseBase(models.Model):
     """Résumé par base de données"""
     serveur = models.ForeignKey(Server, on_delete=models.CASCADE)
@@ -60,3 +62,16 @@ class AnalyseBase(models.Model):
     
     def __str__(self):
         return f"{self.base_donnees}"
+
+
+class LLMResponseLog(models.Model):
+    """Journalisation des réponses des modèles LLM pour le benchmark."""
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    model_name = models.CharField(max_length=100)
+    question = models.TextField()
+    answer = models.TextField()
+    latency_ms = models.FloatField(help_text="Temps de réponse du modèle en millisecondes")
+
+    def __str__(self) -> str:  # pragma: no cover - représentation simple
+        return f"{self.model_name} - {self.created_at:%Y-%m-%d %H:%M:%S}"

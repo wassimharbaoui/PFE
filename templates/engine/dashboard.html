@@ -162,6 +162,49 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- Chatbot a droite -->
+    <div style="margin-top: 30px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; align-items: start;">
+        <div></div>
+        <aside style="position: sticky; top: 18px;">
+            <button id="chatbot-toggle" type="button" onclick="toggleChatbot()" aria-label="Ouvrir le chatbot" class="chatbot-fab">
+                <i class="fas fa-robot chatbot-fab-icon"></i>
+            </button>
+
+            <div id="chat-panel" class="chat-panel" style="display: none; margin-top: 12px; background: #0b1220; border-radius: 22px; padding: 18px; box-shadow: 0 16px 36px rgba(11,18,32,0.35); border: 1px solid #1e2a3a;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #00c6a2 0%, #00a8ff 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(0,168,255,0.35);">
+                            <i class="fas fa-comments" style="color: white; font-size: 1.2rem;"></i>
+                        </div>
+                        <div style="color: white;">
+                            <div style="font-weight: 700; font-size: 1.05rem;">Assistant data</div>
+                            <div style="font-size: 0.8rem; color: #a7b4c6;">Chatbot gouvernance</div>
+                        </div>
+                    </div>
+                    <span style="font-size: 0.75rem; color: #7dd3fc; border: 1px solid #1f3b4f; padding: 4px 8px; border-radius: 999px; background: #0f1b2a;">En ligne</span>
+                </div>
+
+                <p style="margin: 0 0 12px; color: #cbd5e1; font-size: 0.9rem;">
+                    Posez vos questions sur la qualite des donnees et obtenez une reponse claire.
+                </p>
+
+                <div style="background: #0f1b2a; border: 1px solid #1f3b4f; border-radius: 16px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+                    <div id="chat-results" style="max-height: 260px; overflow-y: auto; display: grid; gap: 10px; padding: 6px 4px 10px;"></div>
+                    <div id="chat-status" style="font-size: 0.85rem; color: #94a3b8; margin: 2px 0 0;"></div>
+                    <div style="border-top: 1px solid #1f3b4f; padding-top: 8px; display: grid; gap: 8px;">
+                        <textarea id="chat-question" rows="2" placeholder="Ecrivez votre question ici..." style="width: 100%; background: transparent; color: #e2e8f0; border: none; outline: none; resize: vertical; font-size: 0.92rem;"></textarea>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <small style="color: #94a3b8;">Soyez precis sur le serveur ou la base.</small>
+                            <button type="button" onclick="sendChatQuestion()" style="background: linear-gradient(135deg, #ffb347 0%, #ff7a59 100%); color: #1b1b1b; border: none; padding: 8px 16px; border-radius: 14px; font-size: 0.9rem; font-weight: 700; cursor: pointer; box-shadow: 0 8px 18px rgba(255,122,89,0.4);">
+                                <i class="fas fa-paper-plane"></i> Envoyer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
 </div>
 
 <script>
@@ -188,15 +231,218 @@ function toggleBase(baseId) {
         icon.style.transform = 'rotate(0deg)';
     }
 }
+
+function toggleChatbot() {
+    const panel = document.getElementById('chat-panel');
+    const questionInput = document.getElementById('chat-question');
+    if (!panel) return;
+    const willOpen = (panel.style.display === 'none' || panel.style.display === '');
+    panel.style.display = willOpen ? 'block' : 'none';
+    if (willOpen && questionInput) {
+        questionInput.focus();
+        panel.scrollTop = 0;
+    }
+}
+
+function scrollChatToBottom() {
+    const resultsEl = document.getElementById('chat-results');
+    if (!resultsEl) return;
+    resultsEl.scrollTop = resultsEl.scrollHeight;
+}
+
+// Utilitaires CSRF (Django)
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+async function sendChatQuestion() {
+    const questionInput = document.getElementById('chat-question');
+    const statusEl = document.getElementById('chat-status');
+    const resultsEl = document.getElementById('chat-results');
+
+    const question = (questionInput.value || '').trim();
+    if (!question) {
+        statusEl.textContent = "Merci d'écrire une question avant d'envoyer.";
+        statusEl.style.color = '#e74c3c';
+        return;
+    }
+
+    // Ajoute la question dans le fil
+    const userBubble = document.createElement('div');
+    userBubble.style.background = '#1f2937';
+    userBubble.style.color = '#e2e8f0';
+    userBubble.style.padding = '8px 10px';
+    userBubble.style.borderRadius = '12px 12px 4px 12px';
+    userBubble.style.justifySelf = 'end';
+    userBubble.style.maxWidth = '90%';
+    userBubble.style.whiteSpace = 'pre-wrap';
+    userBubble.textContent = question;
+    resultsEl.appendChild(userBubble);
+    scrollChatToBottom();
+
+    // Efface l'input pour la prochaine question
+    questionInput.value = '';
+
+    // Animation "en cours de reflexion"
+    const typingBubble = document.createElement('div');
+    typingBubble.style.background = '#0b1220';
+    typingBubble.style.color = '#cbd5e1';
+    typingBubble.style.border = '1px solid #1f3b4f';
+    typingBubble.style.padding = '8px 10px';
+    typingBubble.style.borderRadius = '12px 12px 12px 4px';
+    typingBubble.style.maxWidth = '90%';
+    typingBubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+    resultsEl.appendChild(typingBubble);
+    scrollChatToBottom();
+
+    statusEl.textContent = "L'assistant reflechit...";
+    statusEl.style.color = '#777';
+
+    const csrftoken = getCookie('csrftoken');
+
+    try {
+        const response = await fetch('{% url "engine:chatbot_api" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken || '',
+            },
+            body: JSON.stringify({ question: question }),
+        });
+
+        if (!response.ok) {
+            statusEl.textContent = "Erreur HTTP " + response.status + " lors de l'appel au chatbot.";
+            statusEl.style.color = '#e74c3c';
+            return;
+        }
+
+        const data = await response.json();
+        if (!data.success) {
+            statusEl.textContent = data.error || 'Une erreur est survenue côté serveur.';
+            statusEl.style.color = '#e74c3c';
+            return;
+        }
+
+        if (!data.results || data.results.length === 0) {
+            statusEl.textContent = "Aucun résultat retourné par les modèles.";
+            statusEl.style.color = '#e67e22';
+            return;
+        }
+
+        const result = data.results[0];
+        typingBubble.remove();
+
+        statusEl.textContent = "Réponse disponible.";
+        statusEl.style.color = '#27ae60';
+
+        const assistantBubble = document.createElement('div');
+        assistantBubble.style.background = '#0b1220';
+        assistantBubble.style.color = '#e2e8f0';
+        assistantBubble.style.border = '1px solid #1f3b4f';
+        assistantBubble.style.padding = '10px 12px';
+        assistantBubble.style.borderRadius = '12px 12px 12px 4px';
+        assistantBubble.style.maxWidth = '90%';
+        assistantBubble.style.whiteSpace = 'pre-wrap';
+
+        if (result.error) {
+            assistantBubble.textContent = 'Erreur : ' + result.error;
+            assistantBubble.style.color = '#fca5a5';
+        } else {
+            assistantBubble.textContent = result.answer || '[Réponse vide]';
+        }
+
+        resultsEl.appendChild(assistantBubble);
+        scrollChatToBottom();
+    } catch (err) {
+        console.error(err);
+        typingBubble.remove();
+        statusEl.textContent = "Erreur côté client lors de l'appel au chatbot.";
+        statusEl.style.color = '#e74c3c';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const questionInput = document.getElementById('chat-question');
+    if (!questionInput) return;
+    questionInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendChatQuestion();
+        }
+    });
+});
 </script>
 
 <style>
+    .chatbot-fab {
+        position: sticky;
+        top: 18px;
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        border: none;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        box-shadow: 0 14px 28px rgba(118, 75, 162, 0.35);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        animation: chatbotWiggle 6s ease-in-out infinite;
+    }
+    .chatbot-fab:focus {
+        outline: 2px solid rgba(255, 255, 255, 0.7);
+        outline-offset: 3px;
+    }
+    .chatbot-fab-icon {
+        color: white;
+        font-size: 1.4rem;
+    }
+    .chat-panel {
+        animation: chatbotPop 0.25s ease-out;
+    }
     .btn-glow:hover {
         transform: translateY(-3px);
         box-shadow: 0 20px 40px rgba(102, 126, 234, 0.6) !important;
     }
     div[onclick] {
         cursor: pointer;
+    }
+    .typing-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        margin-right: 4px;
+        border-radius: 999px;
+        background: #7dd3fc;
+        animation: typingPulse 1.2s infinite ease-in-out;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingPulse {
+        0%, 80%, 100% { opacity: 0.2; transform: translateY(0); }
+        40% { opacity: 1; transform: translateY(-3px); }
+    }
+    @keyframes chatbotWiggle {
+        0%, 92%, 100% { transform: translateY(0) rotate(0deg); }
+        94% { transform: translateY(-2px) rotate(-6deg); }
+        96% { transform: translateY(2px) rotate(6deg); }
+        98% { transform: translateY(-1px) rotate(-3deg); }
+    }
+    @keyframes chatbotPop {
+        from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
     }
 </style>
 {% endblock %}

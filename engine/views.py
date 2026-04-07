@@ -3,13 +3,18 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.template.defaulttags import register
-import pyodbc
 import json
-from .models import AnalyseTable, AnalyseBase
-from .analyser import AnalyseurTables
-from servers.models import Server
+import time
 
 from django import template
+
+import pyodbc
+
+from .analyser import AnalyseurTables
+from .models import AnalyseBase, AnalyseTable, LLMResponseLog
+from .ollama_client import OllamaError, chat_with_model
+from servers.models import Server
+
 register = template.Library()
 
 @register.filter
@@ -20,6 +25,45 @@ def filter_by_serveur_base(analyses_bases, serveur_id_base):
         serveur_id=int(serveur_id),
         base_donnees=base_nom
     ).first()
+
+
+def _build_analyses_summary(max_bases: int = 50) -> list[dict]:
+    """Construit un résumé compact des analyses de bases pour le prompt LLM.
+
+    On ne garde que la dernière analyse par couple (serveur, base) et on limite
+    le nombre total de bases pour ne pas saturer le contexte du modèle.
+    """
+
+    latest_by_key: dict[tuple[int, str], AnalyseBase] = {}
+    for analyse in AnalyseBase.objects.select_related("serveur").order_by(
+        "serveur_id", "base_donnees", "-date_analyse"
+    ):
+        key = (analyse.serveur_id, analyse.base_donnees)
+        if key not in latest_by_key:
+            latest_by_key[key] = analyse
+
+    # On convertit en dictionnaires simples et on trie par score décroissant
+    summary: list[dict] = []
+    for (serveur_id, base), analyse in latest_by_key.items():
+        summary.append(
+            {
+                "serveur_id": serveur_id,
+                "serveur_nom": analyse.serveur.name,
+                "base": analyse.base_donnees,
+                "score": analyse.score,
+                "nb_tables": analyse.nb_tables,
+                "tables_sans_pk": analyse.tables_sans_pk,
+                "tables_sans_index": analyse.tables_sans_index,
+                "tables_jamais_utilisees": analyse.tables_jamais_utilisees,
+                "nb_procedures": analyse.nb_procedures,
+                "nb_vues": analyse.nb_vues,
+                "nb_fk_total": analyse.nb_fk_total,
+                "date_analyse": analyse.date_analyse.isoformat(),
+            }
+        )
+
+    summary.sort(key=lambda x: x.get("score", 0), reverse=True)
+    return summary[:max_bases]
 
 @login_required
 def dashboard(request):
@@ -213,25 +257,181 @@ def get_databases_ajax(request):
 @login_required
 def chatbot_api(request):
     """API pour le chatbot"""
-    if request.method == 'POST':
+    if request.method != "POST":
+        return JsonResponse({"response": "Méthode non autorisée", "success": False}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({"success": False, "error": "JSON invalide"}, status=400)
+
+    question: str = (data.get("question") or "").strip()
+    if not question:
+        return JsonResponse({"success": False, "error": "La question est vide"}, status=400)
+    question_lower = question.lower()
+
+    # Détermination du mode : "chat général" ou "analyse des bases".
+    question_words = [
+        "quelle",
+        "quelles",
+        "quel ",
+        "quels",
+        "pourquoi",
+        "comment",
+        "combien",
+        "quand",
+        "est-ce",
+        "peux-tu",
+        "peux tu",
+        "donne",
+        "explique",
+    ]
+    db_words = [
+        "base",
+        "bases",
+        "table",
+        "tables",
+        "serveur",
+        "serveurs",
+        "qualité",
+        "qualite",
+        "score",
+        "fk",
+        "index",
+        "pk",
+        "doublon",
+        "doublons",
+        "contrainte",
+        "contraintes",
+        "null",
+        "donnée",
+        "donnees",
+        "données",
+    ]
+
+    has_question_word = ("?" in question_lower) or any(w in question_lower for w in question_words)
+    has_db_word = any(w in question_lower for w in db_words)
+
+    analysis_mode = has_question_word and has_db_word
+
+    # Mode conversationnel simple : salutation, présentation, questions générales.
+    if not analysis_mode:
+        if any(word in question_lower for word in ["bonjour", "salut", "hello", "bonsoir", "coucou"]):
+            chat_answer = (
+                "Bonjour ! Je suis l'assistant de votre plateforme de gouvernance des données. "
+                "Je peux vous aider à analyser vos serveurs, bases et tables, ou répondre à vos "
+                "questions sur la qualité des données. Par quoi voulez-vous commencer ?"
+            )
+        elif (
+            "poser des questions" in question_lower
+            or "aide" in question_lower
+            or "question" in question_lower
+            or "questions" in question_lower
+        ):
+            chat_answer = (
+                "Je suis là pour vous aider sur vos bases de données. "
+                "Par exemple, vous pouvez me demander : 'Quelle est la meilleure base sur le "
+                "serveur test 1 et pourquoi ?' ou 'Quelles sont les faiblesses de la base Test3 ?'"
+            )
+        else:
+            chat_answer = (
+                "Je suis votre chatbot Data Quality. Posez-moi des questions sur vos serveurs, "
+                "bases ou tables (meilleure base, points faibles, recommandations, etc.) et je "
+                "vous répondrai en me basant sur les analyses existantes."
+            )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "results": [
+                    {
+                        "model": "assistant",
+                        "answer": chat_answer,
+                        "latency_ms": 0,
+                        "error": None,
+                    }
+                ],
+            }
+        )
+
+    # À partir d'ici : mode "analyse" utilisant les LLM et les métriques.
+
+    # Modèle déployé (fixe) pour le chatbot.
+    requested_models = ["qwen2.5:7b"]
+
+    # Construction du contexte à partir des dernières analyses de bases
+    analyses_summary = _build_analyses_summary(max_bases=30)
+    analyses_json = json.dumps(analyses_summary, ensure_ascii=False)
+
+    system_prompt = (
+        "Tu es un expert en gouvernance des données et en qualité des données "
+        "sur des bases SQL Server. Tu réponds toujours en français, de façon "
+        "claire et synthétique (quelques phrases et éventuellement une courte "
+        "liste à puces). Concentre-toi uniquement sur la question posée et sur "
+        "les métriques fournies."
+    )
+
+    user_content = (
+        "Voici un résumé des dernières analyses de bases de données sous "
+        "forme de JSON. Chaque entrée correspond à une base analysée :\n\n"
+        f"{analyses_json}\n\n"
+        "Question de l'utilisateur :\n"
+        f"{question}\n\n"
+        "Réponds en t'appuyant sur ces métrriques (score, nombre de tables, "
+        "tables sans PK/index, tables jamais utilisées, procédures, vues, FK). "
+        "Explique brièvement ton raisonnement puis donne une réponse "
+        "synthétique adaptée à un encadrant de PFE."
+    )
+
+    results: list[dict] = []
+
+    # Ici, on ne fixe plus de limite stricte sur le nombre de tokens générés
+    # (max_tokens). Les modèles peuvent donc produire des réponses complètes,
+    # au prix d'un temps de réponse plus long.
+
+    for model_name in requested_models:
+        start = time.perf_counter()
         try:
-            data = json.loads(request.body)
-            question = data.get('question', '').lower()
-            
-            if 'null' in question:
-                response = "🔍 Les valeurs NULL sont des données manquantes."
-            elif 'table' in question:
-                response = "📁 Chaque table est analysée (PK, index, taille, etc.)"
-            elif 'base' in question:
-                response = "💾 Vous pouvez analyser différentes bases"
-            elif 'bonjour' in question:
-                response = "👋 Bonjour ! Je suis votre assistant"
-            elif 'merci' in question:
-                response = "😊 Avec plaisir !"
-            else:
-                response = "🤔 Posez-moi des questions sur les tables, bases, NULL..."
-            
-            return JsonResponse({'response': response, 'success': True})
-        except Exception as e:
-            return JsonResponse({'response': f"Erreur: {str(e)}", 'success': False})
-    return JsonResponse({'response': 'Méthode non autorisée', 'success': False})
+            answer, _ = chat_with_model(
+                model_name,
+                system_prompt,
+                user_content,
+                temperature=0.2,
+            )
+            duration_ms = (time.perf_counter() - start) * 1000
+
+            LLMResponseLog.objects.create(
+                model_name=model_name,
+                question=question,
+                answer=answer,
+                latency_ms=duration_ms,
+            )
+
+            results.append(
+                {
+                    "model": model_name,
+                    "answer": answer,
+                    "latency_ms": round(duration_ms, 2),
+                    "error": None,
+                }
+            )
+        except OllamaError as exc:
+            results.append(
+                {
+                    "model": model_name,
+                    "answer": "",
+                    "latency_ms": None,
+                    "error": str(exc),
+                }
+            )
+        except Exception as exc:  # garde-fou générique
+            results.append(
+                {
+                    "model": model_name,
+                    "answer": "",
+                    "latency_ms": None,
+                    "error": f"Erreur inattendue: {exc}",
+                }
+            )
+
+    return JsonResponse({"success": True, "results": results})

@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Avg
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
@@ -87,9 +88,18 @@ def dashboard(request):
     
     # Calculer les statistiques pour les cartes
     total_tables = tables.count()
-    total_problemes = 0
-    for ab in analyses_bases:
-        total_problemes += ab.tables_sans_pk + ab.tables_sans_index + ab.tables_jamais_utilisees
+    top_base = (
+        AnalyseBase.objects.select_related('serveur')
+        .order_by(
+            '-score',
+            'tables_sans_pk',
+            'tables_sans_index',
+            '-nb_fk_total',
+            '-date_analyse',
+        )
+        .first()
+    )
+    avg_score = analyses_bases.aggregate(avg=Avg('score'))['avg'] or 0
     
     # Filtre personnalisé
     from django.template.defaulttags import register
@@ -102,7 +112,8 @@ def dashboard(request):
         'analyses_bases': analyses_bases,
         'tables_par_base': tables_par_base,
         'total_tables': total_tables,
-        'total_problemes': total_problemes,
+        'top_base': top_base,
+        'avg_score': avg_score,
         'active_menu': 'dashboard'
     })
 @login_required
@@ -153,43 +164,48 @@ def lancer_analyse(request):
                     total_procedures += data['nb_procedures']
                     total_vues += data['nb_vues']
                 
-                # NOUVEAU CALCUL DU SCORE
-                score = 100
+                # NOUVEAU CALCUL DU SCORE (moyenne des scores par table)
+                table_scores = []
                 for data in tables_data:
+                    table_score = 100
+
                     # Pénalités par table
                     if not data['a_pk']:
-                        score -= 5
+                        table_score -= 5
                     if not data['a_index']:
-                        score -= 3
+                        table_score -= 3
                     if data['jamais_utilisee']:
-                        score -= 2
-                    
+                        table_score -= 2
+
                     # Bonus
-                    score += min(data['nb_fk'] * 2, 5)
-                    score += min(data['nb_check'] * 2, 3)
-                    score += min(data['nb_procedures'], 3)
-                    score += min(data['nb_vues'], 2)
-                    
+                    table_score += min(data['nb_fk'] * 2, 5)
+                    table_score += min(data['nb_check'] * 2, 3)
+                    table_score += min(data['nb_procedures'], 3)
+                    table_score += min(data['nb_vues'], 2)
+
                     # Pénalités sur les données
                     if data['nb_lignes'] > 0:
                         # Doublons
-                        ratio_doublons = data['nb_doublons'] / data['nb_lignes']
-                        if ratio_doublons > 0.1:
-                            score -= 3
-                        elif ratio_doublons > 0.05:
-                            score -= 2
-                        elif ratio_doublons > 0.01:
-                            score -= 1
-                        
+                        if data['nb_doublons'] > 0:
+                            ratio_doublons = data['nb_doublons'] / data['nb_lignes']
+                            if ratio_doublons > 0.1:
+                                table_score -= 3
+                            elif ratio_doublons > 0.05:
+                                table_score -= 2
+                            elif ratio_doublons > 0.01:
+                                table_score -= 1
+
                         # Colonnes NULLables
                         if data['nb_colonnes'] > 0:
                             ratio_null = data['nb_nullables'] / data['nb_colonnes']
                             if ratio_null > 0.5:
-                                score -= 2
+                                table_score -= 2
                             elif ratio_null > 0.3:
-                                score -= 1
+                                table_score -= 1
 
-                score = max(0, min(100, round(score, 2)))
+                    table_scores.append(max(0, min(100, round(table_score, 2))))
+
+                score = round(sum(table_scores) / len(table_scores), 2) if table_scores else 0
                 
                 # CRÉATION DE L'ANALYSE BASE
                 AnalyseBase.objects.create(
@@ -368,7 +384,8 @@ def chatbot_api(request):
         "sur des bases SQL Server. Tu réponds toujours en français, de façon "
         "claire et synthétique (quelques phrases et éventuellement une courte "
         "liste à puces). Concentre-toi uniquement sur la question posée et sur "
-        "les métriques fournies."
+        "les métriques fournies. Ne mentionne jamais l'IA, le modèle, le prompt "
+        "ou l'encadrant. Ne produis pas de titres comme 'Réponse à l'Encadrant'."
     )
 
     user_content = (
@@ -377,10 +394,10 @@ def chatbot_api(request):
         f"{analyses_json}\n\n"
         "Question de l'utilisateur :\n"
         f"{question}\n\n"
-        "Réponds en t'appuyant sur ces métrriques (score, nombre de tables, "
+        "Réponds en t'appuyant sur ces métriques (score, nombre de tables, "
         "tables sans PK/index, tables jamais utilisées, procédures, vues, FK). "
         "Explique brièvement ton raisonnement puis donne une réponse "
-        "synthétique adaptée à un encadrant de PFE."
+        "synthétique et professionnelle."
     )
 
     results: list[dict] = []

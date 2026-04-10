@@ -59,12 +59,12 @@ class AnalyseurTables:
         """)
         data['a_pk'] = self.cursor.fetchone()[0] > 0
         
-        # 2. Vérifier index
+        # 2. Vérifier index (clustered ou nonclustered)
         self.cursor.execute(f"""
             SELECT COUNT(*) FROM sys.indexes 
             WHERE object_id = OBJECT_ID('{table_name}') AND index_id > 0
         """)
-        data['a_index'] = self.cursor.fetchone()[0] > 1
+        data['a_index'] = self.cursor.fetchone()[0] > 0
         
         # 3. Colonnes
         self.cursor.execute(f"""
@@ -120,16 +120,49 @@ class AnalyseurTables:
             data['derniere_modification'] = last_use
             data['jamais_utilisee'] = False
         
-        # 9. Procédures et vues
+        # 9. Procédures et vues (comptage séparé)
         self.cursor.execute(f"""
             SELECT COUNT(*) FROM sys.sql_modules m
             JOIN sys.objects o ON m.object_id = o.object_id
-            WHERE o.type IN ('P', 'V') 
+            WHERE o.type = 'P'
             AND m.definition LIKE '%{table_name}%'
         """)
-        procs_views = self.cursor.fetchone()[0] or 0
-        data['nb_procedures'] = procs_views // 2
-        data['nb_vues'] = procs_views // 2
+        data['nb_procedures'] = self.cursor.fetchone()[0] or 0
+
+        self.cursor.execute(f"""
+            SELECT COUNT(*) FROM sys.sql_modules m
+            JOIN sys.objects o ON m.object_id = o.object_id
+            WHERE o.type = 'V'
+            AND m.definition LIKE '%{table_name}%'
+        """)
+        data['nb_vues'] = self.cursor.fetchone()[0] or 0
+
+        # 10. Doublons (groupés sur toutes les colonnes)
+        if data['nb_lignes'] > 0:
+            self.cursor.execute(
+                """
+                SELECT QUOTENAME(COLUMN_NAME)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = ?
+                ORDER BY ORDINAL_POSITION
+                """,
+                table_name,
+            )
+            columns = [row[0] for row in self.cursor.fetchall()]
+            if columns:
+                group_by = ", ".join(columns)
+                table_quoted = f"[{table_name}]"
+                duplicates_sql = (
+                    f"SELECT SUM(cnt - 1) FROM ("
+                    f"SELECT COUNT(*) AS cnt FROM {table_quoted} "
+                    f"GROUP BY {group_by} HAVING COUNT(*) > 1"
+                    f") d"
+                )
+                try:
+                    self.cursor.execute(duplicates_sql)
+                    data['nb_doublons'] = self.cursor.fetchone()[0] or 0
+                except:
+                    data['nb_doublons'] = 0
         
         return data
     

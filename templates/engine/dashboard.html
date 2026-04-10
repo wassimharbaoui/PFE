@@ -39,20 +39,32 @@
         </div>
         <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px;">
             <div style="background: linear-gradient(135deg, #f39c1220 0%, #e67e2220 100%); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center;">
-                <i class="fas fa-table" style="color: #f39c12; font-size: 1.8rem;"></i>
+                <i class="fas fa-trophy" style="color: #f39c12; font-size: 1.8rem;"></i>
             </div>
             <div>
-                <h3 style="font-size: 1.8rem; margin: 0; color: #333;">{{ total_tables }}</h3>
-                <p style="color: #666; margin: 0;">Tables</p>
+                <h3 style="font-size: 1.2rem; margin: 0; color: #333;">
+                    {% if top_base %}
+                        {{ top_base.base_donnees }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </h3>
+                <p style="color: #666; margin: 0;">
+                    {% if top_base %}
+                        Meilleure base - {{ top_base.serveur.name }}
+                    {% else %}
+                        Meilleure base
+                    {% endif %}
+                </p>
             </div>
         </div>
         <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px;">
             <div style="background: linear-gradient(135deg, #e74c3c20 0%, #c0392b20 100%); width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center;">
-                <i class="fas fa-exclamation-triangle" style="color: #e74c3c; font-size: 1.8rem;"></i>
+                <i class="fas fa-percent" style="color: #e74c3c; font-size: 1.8rem;"></i>
             </div>
             <div>
-                <h3 style="font-size: 1.8rem; margin: 0; color: #333;">{{ total_problemes }}</h3>
-                <p style="color: #666; margin: 0;">Problèmes</p>
+                <h3 style="font-size: 1.8rem; margin: 0; color: #333;">{{ avg_score|floatformat:0 }}%</h3>
+                <p style="color: #666; margin: 0;">Moyenne des scores</p>
             </div>
         </div>
     </div>

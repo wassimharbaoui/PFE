@@ -65,6 +65,12 @@
             transform: translateX(8px);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
+        .menu-item:active {
+            transform: translateX(8px) scale(0.98);
+        }
+        .menu-item.is-clicked {
+            animation: menuPulse 0.35s ease;
+        }
         
         .menu-item a {
             color: white;
@@ -82,6 +88,9 @@
             flex: 1;
             padding: 30px;
             min-height: 100vh;
+        }
+        body.is-dashboard .content {
+            animation: dashboardEnter 0.45s ease both;
         }
         
         .header {
@@ -273,9 +282,30 @@
         .mb-4 {
             margin-bottom: 1.5rem;
         }
+        @keyframes menuPulse {
+            0% {
+                transform: translateX(8px) scale(1);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                background: rgba(255,255,255,0.2);
+            }
+            50% {
+                transform: translateX(8px) scale(0.96);
+                box-shadow: 0 8px 22px rgba(0,0,0,0.28);
+                background: rgba(255,255,255,0.28);
+            }
+            100% {
+                transform: translateX(8px) scale(1);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                background: rgba(255,255,255,0.2);
+            }
+        }
+        @keyframes dashboardEnter {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body>
+<body class="{% if active_menu == 'dashboard' %}is-dashboard{% endif %}">
     <div class="sidebar">
         <h2><i class="fas fa-chart-line" style="margin-right: 10px;"></i> Data Quality</h2>
         
@@ -320,5 +350,18 @@
         
         {% block content %}{% endblock %}
     </div>
+
+    <script>
+        document.querySelectorAll('.menu-item').forEach((item) => {
+            item.addEventListener('mousedown', () => {
+                item.classList.remove('is-clicked');
+                void item.offsetWidth;
+                item.classList.add('is-clicked');
+                item.addEventListener('animationend', () => {
+                    item.classList.remove('is-clicked');
+                }, { once: true });
+            });
+        });
+    </script>
 </body>
 </html>

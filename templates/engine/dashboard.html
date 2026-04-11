@@ -74,7 +74,7 @@
         {% for serveur in serveurs %}
         <div style="background: white; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #f0f0f0;">
             <!-- En-tête serveur -->
-            <div style="padding: 20px 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleServer('{{ serveur.id }}')">
+            <div class="clickable-toggle" style="padding: 20px 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleServer('{{ serveur.id }}')">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <i class="fas fa-chevron-right" id="server-icon-{{ serveur.id }}" style="font-size: 1.3rem; transition: transform 0.3s;"></i>
                     <i class="fas fa-server" style="font-size: 1.5rem;"></i>
@@ -87,13 +87,13 @@
             </div>
 
             <!-- Bases du serveur -->
-<div id="server-{{ serveur.id }}" style="display: none; padding: 20px; background: #f8fafc;">
+<div id="server-{{ serveur.id }}" class="collapsible" style="padding: 20px; background: #f8fafc;">
     {% for analyse_base in analyses_bases %}
         {% if analyse_base.serveur.id == serveur.id %}
             <!-- Base trouvée dans les analyses -->
             <div style="background: white; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 3px 10px rgba(0,0,0,0.03); overflow: hidden; border: 1px solid #e9ecef;">
                 <!-- En-tête base -->
-                <div style="padding: 18px 22px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #f8fafd; border-left: 5px solid #667eea;" onclick="toggleBase('{{ serveur.id }}-{{ analyse_base.base_donnees }}')">
+                <div class="clickable-toggle" style="padding: 18px 22px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #f8fafd; border-left: 5px solid #667eea;" onclick="toggleBase('{{ serveur.id }}-{{ analyse_base.base_donnees }}')">
                     <div style="display: flex; align-items: center; gap: 15px;">
                         <i class="fas fa-chevron-right" id="base-icon-{{ serveur.id }}-{{ analyse_base.base_donnees }}" style="color: #667eea; transition: transform 0.3s;"></i>
                         <h4 style="margin: 0; font-size: 1.2rem; color: #2d3748;">{{ analyse_base.base_donnees }}</h4>
@@ -118,7 +118,7 @@
                 </div>
 
                 <!-- Tables de la base -->
-                <div id="base-{{ serveur.id }}-{{ analyse_base.base_donnees }}" style="display: none; padding: 20px; background: white; border-top: 1px solid #e9ecef;">
+                <div id="base-{{ serveur.id }}-{{ analyse_base.base_donnees }}" class="collapsible" style="padding: 20px; background: white; border-top: 1px solid #e9ecef;">
                     <div style="overflow-x: auto;">
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
                             <thead>
@@ -223,25 +223,19 @@
 function toggleServer(serverId) {
     var element = document.getElementById('server-' + serverId);
     var icon = document.getElementById('server-icon-' + serverId);
-    if (element.style.display === 'none' || element.style.display === '') {
-        element.style.display = 'block';
-        icon.style.transform = 'rotate(90deg)';
-    } else {
-        element.style.display = 'none';
-        icon.style.transform = 'rotate(0deg)';
-    }
+    if (!element || !icon) return;
+    const willOpen = !element.classList.contains('is-open');
+    element.classList.toggle('is-open', willOpen);
+    icon.style.transform = willOpen ? 'rotate(90deg)' : 'rotate(0deg)';
 }
 
 function toggleBase(baseId) {
     var element = document.getElementById('base-' + baseId);
     var icon = document.getElementById('base-icon-' + baseId);
-    if (element.style.display === 'none' || element.style.display === '') {
-        element.style.display = 'block';
-        icon.style.transform = 'rotate(90deg)';
-    } else {
-        element.style.display = 'none';
-        icon.style.transform = 'rotate(0deg)';
-    }
+    if (!element || !icon) return;
+    const willOpen = !element.classList.contains('is-open');
+    element.classList.toggle('is-open', willOpen);
+    icon.style.transform = willOpen ? 'rotate(90deg)' : 'rotate(0deg)';
 }
 
 function toggleChatbot() {
@@ -423,6 +417,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     .chat-panel {
         animation: chatbotPop 0.25s ease-out;
+    }
+    .collapsible {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        transition: max-height 0.35s ease, opacity 0.2s ease;
+    }
+    .collapsible.is-open {
+        max-height: 2400px;
+        opacity: 1;
+    }
+    .clickable-toggle {
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    .clickable-toggle:active {
+        transform: scale(0.995);
     }
     .btn-glow:hover {
         transform: translateY(-3px);
